@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{90ABD09B-4AD0-DE27-555F-C99DB53D85B5}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "TPSPortfolio",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		}
+	]
+}
