@@ -25,19 +25,27 @@ ATPSPortfolioCharacter::ATPSPortfolioCharacter()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 250.0f, 0.0f); // ...at this rotation rate
+	//GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	//GetCharacterMovement()->RotationRate = FRotator(0.0f, 250.0f, 0.0f); // ...at this rotation rate
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = 150.f;
-	fDefaultWalkSpeed = 150.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 500.f;
+
+	//initialize changerotator
+	const FRotator Rotation = GetActorRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+	vChangeDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	
+	fTurnSpeed = 5.f;
+	fDefaultWalkSpeed = 150.f;
 	fSprintSpeedMultiplier = 3.f;
 	bIsSprint = false;
+	bIsMoving = false;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -73,7 +81,7 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	CaculateTotalWalkSpeed();
-	
+	Turn(DeltaSeconds);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -92,6 +100,7 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::MoveComplete);
 
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Look);
@@ -114,17 +123,21 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 
 		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-		//움직임을 캐릭터 방향벡터를 기준으로 움직이도록 설정
-		// 조준모드에서는 카메라 기준 움직임으로 따로 추가
-		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
 		
+		//움직임에 따른 회전 방향값 지정
+		SetMoveDirection(ForwardDirection, RightDirection, MovementVector);
+		bIsMoving = true;
 	}
+}
+
+void ATPSPortfolioCharacter::MoveComplete()
+{
+	bIsMoving = false;
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
@@ -140,20 +153,56 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void ATPSPortfolioCharacter::Turn(const FInputActionValue& Value)
+void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
 {
-	// input is a Vector2D
-	FVector2D MovementVector = Value.Get<FVector2D>();
-	//X=LR Y=BF
-	//X - 플레이어 방향벡터를 카메라 Y 벡터를 바라보게 회전
-	//Y - 플레이어 방향벡터를 카메라 X 벡터를 바라보게 회전
-	//선형보간
+	//움직임을 캐릭터 방향벡터를 기준으로 움직이도록 설정
+	// Y>0 X=0 = Forward 
+	// Y<0 X=0 = (-Foward)
+	// Y>0 X>0 = Forward + Right
+	// Y>0 X<0 = Forward - Right
+	// Y<0 X>0 = (-Forward) + Right
+	// Y<0 X<0 = (-Forward) - Right
+	UE_LOG(LogTemp, Log, TEXT("Y : %f , X : %f"), vMoveVector.Y, vMoveVector.X);
+
+	if (vMoveVector.X == 0 && vMoveVector.Y == 0) return;
+
+	vChangeDirection = 
+#pragma region LEFT / RIGHT	
+		vMoveVector.Y == 0 ? vMoveVector.X > 0 ? vRight : -vRight :
+#pragma endregion					
+#pragma region FOWARD / FR / FL
+		vMoveVector.Y > 0 ? vMoveVector.X == 0 ? vFoward : vMoveVector.X > 0 ? (vFoward + vRight).GetSafeNormal() : (vFoward - vRight).GetSafeNormal() :
+#pragma endregion		
+#pragma region BACK / BR / BL
+		vMoveVector.X == 0 ? -vFoward : vMoveVector.X > 0 ? (-vFoward + vRight).GetSafeNormal() : (-vFoward - vRight).GetSafeNormal();
+#pragma endregion
+
+}
+
+void ATPSPortfolioCharacter::Turn(float DeltaSeconds)
+{
+	if (!bIsMoving) return;
 
 	if (Controller != nullptr)
 	{
-		float DeltaTime = UGameplayStatics::GetWorldDeltaSeconds(this);
-		const FRotator DeltaRotation = FRotator(0, MovementVector.X, 0) * 30.f * DeltaTime;
-		AddActorLocalRotation(DeltaRotation, true);
+		const FRotator rActorRot = GetActorRotation();
+		const FRotator rActorYawRot(0, rActorRot.Yaw, 0);
+		//Actor의 Direction
+		const FVector vActorForwardDirection = FRotationMatrix(rActorYawRot).GetUnitAxis(EAxis::X);
+
+		//내적으로 회전값 구하기
+		double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
+		double dDgrees = FMath::RadiansToDegrees(dArccosRadian);
+		//UE_LOG(LogTemp, Log, TEXT("Dgree : %f"), dDgrees);
+		
+		//외적으로 회전방향 구하기
+		if(vActorForwardDirection.Cross(vChangeDirection).Z < 0)
+			dDgrees *= -1;
+
+		//선형보간으로 회전속도 조절
+		double rTurnRot =  FMath::FInterpTo(0, dDgrees, DeltaSeconds, fTurnSpeed);
+	
+		AddActorWorldRotation(FRotator(0, rTurnRot, 0));
 	}
 }
 

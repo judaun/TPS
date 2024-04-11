@@ -50,10 +50,12 @@ protected:
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
-
+	void MoveComplete();
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-	void Turn(const FInputActionValue& Value);
+
+	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
+	void Turn(float DeltaSeconds);
 			
 	void Sprint();
 	void StopSprint();
@@ -76,8 +78,12 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
-	float fDefaultWalkSpeed = 150.f;
-	float fSprintSpeedMultiplier = 2.f;
-	bool bIsSprint = false;
+	FVector vChangeDirection;
+
+	float fTurnSpeed;
+	float fDefaultWalkSpeed;
+	float fSprintSpeedMultiplier;
+	bool bIsSprint;
+	bool bIsMoving;
 };
 
