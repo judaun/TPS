@@ -9,5 +9,8 @@ public class TPSPortfolio : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "EnhancedInput" });
-	}
+
+		PrivateIncludePaths.Add("TPSPortfolio");
+        PrivateIncludePaths.Add("TPSPortfolio/Public");
+    }
 }

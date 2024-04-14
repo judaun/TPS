@@ -9,16 +9,12 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "IdleCharacterState.h"
+#include "RunCharacterState.h"
+#include "BrakeCharacterState.h"
+#include "SprintCharacterState.h"
+#include "AimCharacterState.h"
 
-#define BRAKE_RUN 0.5f
-#define BRAKE_SPRINT 0.9f
-#define RUN_CONDITION 400
-#define SPRINT_CONDITION 600
-#define WALKSPEED_DECLEASE 400.f
-#define BRAKE_DECLEASE 900.f
-#define IDLE_DECLEASE 550.f
-#define MAX_TURN_DGREE 120.f
-#define SPRINT_TURN_DCREASE 300.f
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
 
@@ -32,33 +28,8 @@ ATPSPortfolioCharacter::ATPSPortfolioCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Configure character movement
-	//GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	//GetCharacterMovement()->RotationRate = FRotator(0.0f, 250.0f, 0.0f); // ...at this rotation rate
-
-	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
-	// instead of recompiling to adjust them
-	GetCharacterMovement()->JumpZVelocity = 700.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 150.f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 750.f;
-	//initialize changerotator
-	const FRotator Rotation = GetActorRotation();
-	const FRotator YawRotation(0, Rotation.Yaw, 0);
-	vChangeDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	vLerpDirection = vChangeDirection;
-	
-	fCrossAngle = 0.f;
-	fTurnSpeed = 360.f;
-	fDefaultWalkSpeed = 150.f;
-	fRunSpeedMultiplier = 3.f;
-	fSprintSpeedMultiplier = 2.f;
-	fBrakeTimer = 0.f;
-	bIsRun = true;
-	bIsSprint = false;
-	bIsMoving = false;
-	bIsBraking = false;
+	//initialize
+	initialize();
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -73,6 +44,45 @@ ATPSPortfolioCharacter::ATPSPortfolioCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
+{
+	vecState.clear();
+}
+
+void ATPSPortfolioCharacter::initialize()
+{
+	GetCharacterMovement()->JumpZVelocity = 700.f;
+	GetCharacterMovement()->AirControl = 0.35f;
+	GetCharacterMovement()->MaxWalkSpeed = 0.f;
+	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 750.f;
+
+	vChangeDirection = GetActorForwardVector();
+	vLerpDirection = vChangeDirection;
+
+	fCrossAngle = 0.f;
+	fTurnSpeed = 360.f;
+	fDefaultWalkSpeed = 150.f;
+	fRunSpeed = 450.f;
+	fSprintSpeed = 800.f;
+	fBrakeTimer = 0.f;
+	bIsRun = true;
+	bIsSprint = false;
+	bIsMoving = false;
+	bIsBraking = false;
+	bIsAiming = false;
+
+	//auto stState = new IdleState();
+	//auto stState = new IdleCharacterState(this);
+	vecState.emplace_back(make_unique<IdleCharacterState>(this));
+	vecState.emplace_back(make_unique<RunCharacterState>(this));
+	vecState.emplace_back(make_unique<BrakeCharacterState>(this));
+	vecState.emplace_back(make_unique<SprintCharacterState>(this));
+	vecState.emplace_back(make_unique<AimCharacterState>(this));
+
+	stCharacterState = vecState[0].get();
 }
 
 void ATPSPortfolioCharacter::BeginPlay()
@@ -93,19 +103,39 @@ void ATPSPortfolioCharacter::BeginPlay()
 void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	CaculateTotalWalkSpeed(DeltaSeconds);
-	Turn(DeltaSeconds);
 	Timer(DeltaSeconds);
 	SlideGround(DeltaSeconds);
-	const FRotator rActorRot = GetActorRotation();
-	const FRotator rActorYawRot(0, rActorRot.Yaw, 0);
-	//Actor의 Direction
-	const FVector vActorForwardDirection = FRotationMatrix(rActorYawRot).GetUnitAxis(EAxis::X);
-
-	if(GetCharacterMovement()->MaxWalkSpeed > 50.f)
-	AddMovementInput(bIsBraking || !bIsMoving || GetCharacterMovement()->MaxWalkSpeed > RUN_CONDITION ? vActorForwardDirection : vChangeDirection);
+	UpdateState(DeltaSeconds);
 }
 
+
+FVector ATPSPortfolioCharacter::GetControlVector()
+{
+	if (Controller == nullptr)
+		return vChangeDirection;
+	
+		// find out which way is forward
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+	// get forward vector
+	return FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+}
+
+float ATPSPortfolioCharacter::GetWalkSpeed()
+{
+	return GetCharacterMovement()->MaxWalkSpeed;
+}
+
+void ATPSPortfolioCharacter::SetWalkSpeed(float WalkSpeed)
+{
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void ATPSPortfolioCharacter::SetBrakeSpeed(float BrakeSpeed)
+{
+	GetCharacterMovement()->BrakingDecelerationWalking = BrakeSpeed;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Input
@@ -133,6 +163,9 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Look);
 
+		//Aiming
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Aim);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AimComplete);
 	}
 
 }
@@ -155,13 +188,15 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 
 		//움직임에 따른 회전 방향값 지정
 		SetMoveDirection(ForwardDirection, RightDirection, MovementVector);
-		bIsMoving = true;
+		SetIsMoving(true);
+		ChangeState(bIsSprint ? eCharacterState::SPRINT : eCharacterState::RUN);
 	}
 }
 
 void ATPSPortfolioCharacter::MoveComplete()
 {
-	bIsMoving = false;
+	ChangeState(eCharacterState::IDLE);
+	SetIsMoving(false);
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
@@ -177,11 +212,31 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void ATPSPortfolioCharacter::Aim()
+{
+	ChangeState(eCharacterState::AIM);
+}
+
+void ATPSPortfolioCharacter::AimComplete()
+{
+	ChangeState(eCharacterState::IDLE);
+}
+
+void ATPSPortfolioCharacter::Attack()
+{
+
+}
+
+void ATPSPortfolioCharacter::AttackComplete()
+{
+
+}
+
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
 {
 	//움직임을 캐릭터 방향벡터를 기준으로 움직이도록 설정
 	if (vMoveVector.X == 0 && vMoveVector.Y == 0) return;
-
+	
 	vChangeDirection = 
 #pragma region LEFT / RIGHT	
 		vMoveVector.Y == 0 ? vMoveVector.X > 0 ? vRight : -vRight :
@@ -197,67 +252,45 @@ void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVec
 
 void ATPSPortfolioCharacter::Turn(float DeltaSeconds)
 {
-	if (!bIsMoving) return;
+	if (!bIsMoving || bIsAiming) return;
 
-	if (Controller != nullptr)
-	{
-		const FRotator rActorRot = GetActorRotation();
-		const FRotator rActorYawRot(0, rActorRot.Yaw, 0);
-		//Actor의 Direction
-		const FVector vActorForwardDirection = FRotationMatrix(rActorYawRot).GetUnitAxis(EAxis::X);
+	const FVector vActorForwardDirection = GetActorForwardVector();
+	//내적으로 회전값 구하기
 
-		//내적으로 회전값 구하기
-		double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
-		float fDegree = FMath::RadiansToDegrees(dArccosRadian);
-		//UE_LOG(LogTemp, Log, TEXT("Speed : %f"), GetCharacterMovement()->MaxWalkSpeed);
-		
-		float fCurrentWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
+	float fDegree = FMath::RadiansToDegrees(dArccosRadian);
 
-		if (fDegree > MAX_TURN_DGREE && fCurrentWalkSpeed > RUN_CONDITION) SetBraking(fCurrentWalkSpeed > SPRINT_CONDITION ? BRAKE_SPRINT : BRAKE_RUN );
+	float fCurrentWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
-		//외적으로 회전방향 구하기
-		if (vActorForwardDirection.Cross(vChangeDirection).Z < 0)
-			fDegree *= -1;
+	if (fDegree > MAX_TURN_DGREE && fCurrentWalkSpeed > RUN_CONDITION) SetBraking(fCurrentWalkSpeed > SPRINT_CONDITION ? BRAKE_SPRINT : BRAKE_RUN);
 
-		float fCalcTurnSpeed = fCurrentWalkSpeed > SPRINT_TURN_DCREASE ? fTurnSpeed / (fCurrentWalkSpeed/ SPRINT_TURN_DCREASE) : fTurnSpeed;
+	//외적으로 회전방향 구하기
+	if (vActorForwardDirection.Cross(vChangeDirection).Z < 0)
+		fDegree *= -1;
 
-		//fCurrentWalkSpeed > 300.f  900 / 300.f = /3
-		
-		//선형보간으로 회전속도 조절
-		double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, fCalcTurnSpeed);
-		
-		
-		//좌우 기울기 움직임 값 적용을 위한 벡터의 점진적 회전 적용
-		float fLerpDegree = FMath::RadiansToDegrees(FMath::Acos(vLerpDirection.Dot(vChangeDirection)));
-		if (vLerpDirection.Cross(vChangeDirection).Z < 0)
-			fLerpDegree *= -1;
-		double rLerpTurnRot = FMath::FInterpConstantTo(0, fLerpDegree, DeltaSeconds, fCalcTurnSpeed*2.f);
-		vLerpDirection = vLerpDirection.RotateAngleAxis(rLerpTurnRot, FVector::UpVector);
+	float fCalcTurnSpeed = fCurrentWalkSpeed > SPRINT_TURN_DCREASE ? fTurnSpeed / (fCurrentWalkSpeed / SPRINT_TURN_DCREASE) : fTurnSpeed;
 
-		fCrossAngle = vActorForwardDirection.Cross(vLerpDirection).Z;
-		
-		if(!bIsBraking)
+	//선형보간으로 회전속도 조절
+	double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, fCalcTurnSpeed);
+
+
+	//좌우 기울기 움직임 값 적용을 위한 벡터의 점진적 회전 적용
+	float fLerpDegree = FMath::RadiansToDegrees(FMath::Acos(vLerpDirection.Dot(vChangeDirection)));
+	if (vLerpDirection.Cross(vChangeDirection).Z < 0)
+		fLerpDegree *= -1;
+	double rLerpTurnRot = FMath::FInterpConstantTo(0, fLerpDegree, DeltaSeconds, fCalcTurnSpeed * 2.f);
+	vLerpDirection = vLerpDirection.RotateAngleAxis(rLerpTurnRot, FVector::UpVector);
+
+	fCrossAngle = vActorForwardDirection.Cross(vLerpDirection).Z;
+
+	if (!bIsBraking)
 		AddActorWorldRotation(FRotator(0, rTurnRot, 0));
-	}
-}
 
-void ATPSPortfolioCharacter::Sprint()
-{
-	bIsSprint = true;
-}
-
-void ATPSPortfolioCharacter::StopSprint()
-{
-	bIsSprint = false;
 }
 
 void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
 {
-	float fMaxSpeed = fDefaultWalkSpeed
-		* (bIsRun ? fRunSpeedMultiplier : 1.f)
-		* (bIsSprint ? fSprintSpeedMultiplier : 1.f)
-		* (bIsBraking ? 0.f : 1.f)
-		* (bIsMoving ? 1.f:0.f);
+	float fMaxSpeed = bIsBraking ? 0.f : !bIsMoving ? 0.f : bIsSprint ? fSprintSpeed : bIsRun ? fRunSpeed : fDefaultWalkSpeed;
 
 	float fLerpSpeed = bIsBraking ? BRAKE_DECLEASE : !bIsMoving ? IDLE_DECLEASE : WALKSPEED_DECLEASE;
 	GetCharacterMovement()->BrakingDecelerationWalking = bIsBraking ? BRAKE_DECLEASE : IDLE_DECLEASE;
@@ -269,7 +302,7 @@ void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
 
 void ATPSPortfolioCharacter::SetBraking(float fTime)
 {
-	bIsBraking = true;
+	ChangeState(eCharacterState::BRAKE);
 	fBrakeTimer = fTime;
 }
 
@@ -277,11 +310,40 @@ void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
 {
 	//Timer
 	if (fBrakeTimer > 0.f) fBrakeTimer -= DeltaSeconds;
-	else bIsBraking = false;
+	else if (bIsBraking)
+	{
+		ChangeState(eCharacterState::IDLE);
+	}
 }
 
 void ATPSPortfolioCharacter::SlideGround(float DeltaSeconds)
 {
 
+}
+
+void ATPSPortfolioCharacter::UpdateState(float DeltaSeconds)
+{
+	if (stCharacterState == nullptr) return;
+
+	stCharacterState->Update(DeltaSeconds);
+}
+
+void ATPSPortfolioCharacter::ChangeState(eCharacterState eChangeState)
+{
+	if (stCharacterState == nullptr || stCharacterState->eState == eChangeState) return;
+
+	if ((bIsBraking || bIsAiming) && eChangeState != eCharacterState::IDLE)
+		return;
+
+	for (int i = 0; i < vecState.size(); ++i)
+	{
+		if (vecState[i]==nullptr || eChangeState != vecState[i]->eState)
+			continue;
+
+		stCharacterState->Exit();
+		stCharacterState = vecState[i].get();
+		stCharacterState->Enter();
+		break;
+	}
 }
 
