@@ -13,7 +13,7 @@ public:
 	IdleCharacterState(ATPSPortfolioCharacter* TpsCharacter);
 	~IdleCharacterState();
 public:
-	virtual void Update(float DeltaSeconds);
-	virtual void Move();
-	virtual void CalculateSpeed(float DeltaSeconds);
+	void Update(float DeltaSeconds) override;
+	void Move() override;
+	void CalculateSpeed(float DeltaSeconds) override;
 };

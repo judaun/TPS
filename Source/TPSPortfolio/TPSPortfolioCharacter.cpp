@@ -109,7 +109,14 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 }
 
 
-FVector ATPSPortfolioCharacter::GetControlVector()
+eCharacterState ATPSPortfolioCharacter::GetCharacterState()
+{
+	if (stCharacterState == nullptr) return eCharacterState::IDLE;
+
+	return stCharacterState->eState;
+}
+
+FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
 {
 	if (Controller == nullptr)
 		return vChangeDirection;
@@ -119,7 +126,9 @@ FVector ATPSPortfolioCharacter::GetControlVector()
 	const FRotator YawRotation(0, Rotation.Yaw, 0);
 
 	// get forward vector
-	return FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	return IsFoward ?
+		 FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X):
+		 FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 }
 
 float ATPSPortfolioCharacter::GetWalkSpeed()
@@ -195,8 +204,9 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 
 void ATPSPortfolioCharacter::MoveComplete()
 {
-	ChangeState(eCharacterState::IDLE);
 	SetIsMoving(false);
+	if(!bIsBraking)
+	ChangeState(eCharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)

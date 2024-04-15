@@ -34,7 +34,7 @@ void AimCharacterState::CalculateSpeed(float DeltaSeconds)
 	if (pCharacter == nullptr) return;
 
 	pCharacter->SetBrakeSpeed(IDLE_DECLEASE);
-	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), pCharacter->GetDefaultWalkSpeed(), DeltaSeconds, WALKSPEED_DECLEASE));
+	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), pCharacter->GetIsSprint() ? pCharacter->GetDefaultRunSpeed() : pCharacter->GetDefaultWalkSpeed(), DeltaSeconds, WALKSPEED_DECLEASE));
 }
 
 void AimCharacterState::Turn(float DeltaSeconds)
@@ -42,7 +42,7 @@ void AimCharacterState::Turn(float DeltaSeconds)
 	if (pCharacter == nullptr) return;
 
 	const FVector vActorForwardDirection = pCharacter->GetActorForwardVector();
-	const FVector vChangeDirection = pCharacter->GetControlVector();
+	const FVector vChangeDirection = pCharacter->GetControlVector(true);
 
 	double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
 	float fDegree = FMath::RadiansToDegrees(dArccosRadian);
@@ -54,7 +54,21 @@ void AimCharacterState::Turn(float DeltaSeconds)
 	//선형보간으로 회전속도 조절
 	double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, TURN_SPEED*2.f);
 
-	pCharacter->SetCrossAngle(0);
+	FVector vChangeControlDirection = pCharacter->GetChangeVector();
+	FVector vControlYDirection = pCharacter->GetControlVector(false);
+
+	float fChangingDegree = FMath::RadiansToDegrees(FMath::Acos(vControlYDirection.Dot(vChangeControlDirection)));
+
+	pCharacter->SetCrossAngle(fChangingDegree);
+
+	float fWalkSpeed = pCharacter->GetWalkSpeed();
+	float fControlAcos = vControlYDirection.Cross(vChangeControlDirection).Z;
+	fWalkSpeed = fControlAcos < 0 || fChangingDegree==0 ? fWalkSpeed : -fWalkSpeed;
+
+	pCharacter->SetFowardValue(fWalkSpeed);
+
+	//UE_LOG(LogTemp, Log, TEXT("FV : %f, CrossAngle : %f"), pCharacter->GetFowardValue(), fChangingDegree);
+	
 	pCharacter->AddActorWorldRotation(FRotator(0, rTurnRot, 0));
 }
 
@@ -67,5 +81,6 @@ void AimCharacterState::Enter()
 void AimCharacterState::Exit()
 {
 	if (pCharacter == nullptr) return;
+	pCharacter->SetWalkSpeed(0.f);
 	pCharacter->SetIsAiming(false);
 }

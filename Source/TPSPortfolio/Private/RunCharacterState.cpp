@@ -25,8 +25,7 @@ void RunCharacterState::Move()
 {
 	if (pCharacter == nullptr) return;
 
-	if (pCharacter->GetWalkSpeed() > MINIMUM_WALKSPEED)
-		pCharacter->AddMovementInput(pCharacter->GetWalkSpeed() > RUN_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
+	pCharacter->AddMovementInput(pCharacter->GetWalkSpeed() > RUN_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
 }
 
 void RunCharacterState::CalculateSpeed(float DeltaSeconds)

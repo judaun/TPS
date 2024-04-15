@@ -13,9 +13,9 @@ public:
 	BrakeCharacterState(ATPSPortfolioCharacter* TpsCharacter);
 	~BrakeCharacterState();
 public:
-	virtual void Update(float DeltaSeconds);
-	virtual void Move();
-	virtual void CalculateSpeed(float DeltaSeconds);
-	virtual void Enter();
-	virtual void Exit();
+	void Update(float DeltaSeconds) override;
+	void Move() override;
+	void CalculateSpeed(float DeltaSeconds) override;
+	void Enter() override;
+	void Exit() override;
 };

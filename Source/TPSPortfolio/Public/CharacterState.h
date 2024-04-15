@@ -6,6 +6,7 @@
 /**
  * 
  */
+UENUM(BlueprintType)
 enum eCharacterState { IDLE, RUN, SPRINT, BRAKE, AIM };
 #define MINIMUM_WALKSPEED 50.f
 
@@ -17,7 +18,7 @@ public:
 	TPSCharacterState();
 	virtual ~TPSCharacterState();
 public:
-	virtual void Update(float DeltaSeconds) {}
+	virtual void Update(float DeltaSeconds) = 0;
 	virtual void Move() {}
 	virtual void CalculateSpeed(float DeltaSeconds) {}
 	virtual void Turn(float DeltaSeconds) {}

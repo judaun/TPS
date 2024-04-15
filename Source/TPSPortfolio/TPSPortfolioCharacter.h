@@ -10,7 +10,7 @@
 #include "TPSPortfolioCharacter.generated.h"
 
 #define BRAKE_RUN 0.5f
-#define BRAKE_SPRINT 0.9f
+#define BRAKE_SPRINT 0.7f
 #define RUN_CONDITION 400
 #define SPRINT_CONDITION 600
 #define WALKSPEED_DECLEASE 400.f
@@ -114,12 +114,18 @@ public:
 	float GetCrossAngle() { return fCrossAngle; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetFowardValue() { return fFowardValue; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	float GetisAiming() { return bIsAiming; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	eCharacterState GetCharacterState();
 
 public:
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
-	FVector GetControlVector();
+	FVector GetControlVector(bool IsFoward = true);
 
 	float GetDefaultWalkSpeed() { return fDefaultWalkSpeed; }
 	float GetDefaultRunSpeed() { return fRunSpeed; }
@@ -127,6 +133,7 @@ public:
 
 	float GetWalkSpeed();
 	bool GetIsMoving() { return bIsMoving; }
+	bool GetIsSprint() {return bIsSprint;}
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
@@ -135,6 +142,7 @@ public:
 	void SetWalkSpeed(float WalkSpeed);
 	void SetBrakeSpeed(float BrakeSpeed);
 	void SetIsAiming(bool IsAiming) { bIsAiming = IsAiming; }
+	void SetFowardValue(float FowardValue) { fFowardValue = FowardValue; }
 
 	void SetBraking(float fTime);
 private:
@@ -144,6 +152,7 @@ private:
 	FVector vLerpDirection;
 
 	float fCrossAngle;
+	float fFowardValue;
 	float fTurnSpeed;
 	float fDefaultWalkSpeed;
 	float fRunSpeed;
