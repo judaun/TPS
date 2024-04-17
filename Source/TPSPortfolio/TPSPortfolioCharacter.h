@@ -6,8 +6,21 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "Kismet/GameplayStatics.h"
+#include "CharacterState.h"
 #include "TPSPortfolioCharacter.generated.h"
 
+#define BRAKE_RUN 0.5f
+#define BRAKE_SPRINT 0.7f
+#define RUN_CONDITION 400
+#define SPRINT_CONDITION 750
+#define WALKSPEED_DECLEASE 400.f
+#define BRAKE_DECLEASE 900.f
+#define IDLE_DECLEASE 550.f
+#define MAX_TURN_DGREE 120.f
+#define SPRINT_TURN_DCREASE 300.f
+#define TURN_SPEED 360.f
+
+using namespace std;
 
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
@@ -34,6 +47,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* SprintAction;
 
+	/** Run Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* RunAction;
+
 	/** Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* MoveAction;
@@ -42,24 +59,39 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* LookAction;
 
+	/** Aim Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* AimAction;
+
 public:
 	ATPSPortfolioCharacter();
-	
+	~ATPSPortfolioCharacter();
+
+private:
+	void initialize();
 
 protected:
-
-	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
-
-	/** Called for looking input */
+	void MoveComplete();
 	void Look(const FInputActionValue& Value);
-	void Turn(const FInputActionValue& Value);
+	void Run() { bIsRun = !bIsRun; }
+	void Sprint() { bIsSprint = true; }
+	void StopSprint() { bIsSprint = false; }
+	void Aim();
+	void AimComplete();
+	void Attack();
+	void AttackComplete();
+
+	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
+	void Turn(float DeltaSeconds);
 			
-	void Sprint();
-	void StopSprint();
+	void CaculateTotalWalkSpeed(float DeltaSeconds);
 
-	void CaculateTotalWalkSpeed();
+	void Timer(float DeltaSeconds);
+	void SlideGround(float DeltaSeconds);
 
+	void UpdateState(float DeltaSeconds);
+	void ChangeState(eCharacterState eChangeState);
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -75,9 +107,73 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-private:
-	float fDefaultWalkSpeed = 150.f;
-	float fSprintSpeedMultiplier = 2.f;
-	bool bIsSprint = false;
-};
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetisBraking() {return bIsBraking;}
 
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetCrossAngle() { return fCrossAngle; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetYCrossAngle() { return fYCrossAngle; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetFowardValue() { return fFowardValue; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetisAiming() { return bIsAiming; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetisAimTurn() { return bIsAimTurn; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	eCharacterState GetCharacterState();
+
+public:
+	FVector GetChangeVector() { return vChangeDirection; }
+	FVector GetLerpVector() { return vLerpDirection; }
+	FVector GetControlVector(bool IsFoward = true);
+	FVector GetControlVectorLastUpdated(bool IsFoward = true);
+
+	float GetDefaultWalkSpeed() { return fDefaultWalkSpeed; }
+	float GetDefaultRunSpeed() { return fRunSpeed; }
+	float GetDefaultSprintSpeed() { return fSprintSpeed; }
+
+	float GetWalkSpeed();
+	bool GetIsMoving() { return bIsMoving; }
+	bool GetIsSprint() {return bIsSprint;}
+
+	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
+	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
+	void SetYCrossAngle(float YCrossAngle) { fYCrossAngle = YCrossAngle; }
+	void SetIsBraking(bool IsBraking) {bIsBraking = IsBraking;}
+	void SetIsMoving(bool IsMoving) { bIsMoving = IsMoving;}
+	void SetWalkSpeed(float WalkSpeed);
+	void SetBrakeSpeed(float BrakeSpeed);
+	void SetIsAiming(bool IsAiming) { bIsAiming = IsAiming; }
+	void SetFowardValue(float FowardValue) { fFowardValue = FowardValue; }
+	void SetIsAimTurn(bool IsAimTurn) { bIsAimTurn = IsAimTurn; }
+	void SetBraking(float fTime);
+private:
+	TPSCharacterState* stCharacterState;
+	vector<unique_ptr<TPSCharacterState>> vecState;
+	FVector vControlVectorX;
+	FVector vControlVectorY;
+	FVector vChangeDirection;
+	FVector vLerpDirection;
+
+	float fCrossAngle;
+	float fYCrossAngle;
+	float fFowardValue;
+	float fTurnSpeed;
+	float fDefaultWalkSpeed;
+	float fRunSpeed;
+	float fSprintSpeed;
+	float fBrakeTimer;
+
+	bool bIsRun;
+	bool bIsSprint;
+	bool bIsMoving;
+	bool bIsBraking;
+	bool bIsAiming;
+	bool bIsAimTurn;
+};
