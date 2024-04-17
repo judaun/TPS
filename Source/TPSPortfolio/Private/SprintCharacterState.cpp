@@ -8,6 +8,7 @@ SprintCharacterState::SprintCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
 	eState = eCharacterState::SPRINT;
+	fDegree = 0.f;
 }
 
 SprintCharacterState::~SprintCharacterState()
@@ -26,7 +27,7 @@ void SprintCharacterState::Move()
 	if (pCharacter == nullptr) return;
 
 	float fSpeed = pCharacter->GetWalkSpeed();
-	pCharacter->AddMovementInput(fSpeed > RUN_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
+	pCharacter->AddMovementInput(fSpeed > SPRINT_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
 }
 
 void SprintCharacterState::CalculateSpeed(float DeltaSeconds)
@@ -34,7 +35,7 @@ void SprintCharacterState::CalculateSpeed(float DeltaSeconds)
 	if (pCharacter == nullptr) return;
 
 	pCharacter->SetBrakeSpeed(IDLE_DECLEASE);
-	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), pCharacter->GetDefaultSprintSpeed(), DeltaSeconds, WALKSPEED_DECLEASE));
+	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), abs(fDegree) > 30.f ? pCharacter->GetDefaultRunSpeed() : pCharacter->GetDefaultSprintSpeed(), DeltaSeconds, BRAKE_DECLEASE));
 }
 
 void SprintCharacterState::Turn(float DeltaSeconds)
@@ -45,11 +46,11 @@ void SprintCharacterState::Turn(float DeltaSeconds)
 	const FVector vChangeDirection = pCharacter->GetChangeVector();
 
 	double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
-	float fDegree = FMath::RadiansToDegrees(dArccosRadian);
+	fDegree = FMath::RadiansToDegrees(dArccosRadian);
 
 	float fCurrentWalkSpeed = pCharacter->GetWalkSpeed();
 
-	if (fDegree > MAX_TURN_DGREE && fCurrentWalkSpeed > RUN_CONDITION) pCharacter->SetBraking(fCurrentWalkSpeed > SPRINT_CONDITION ? BRAKE_SPRINT : BRAKE_RUN);
+	if (fDegree > MAX_TURN_DGREE && fCurrentWalkSpeed > SPRINT_CONDITION) pCharacter->SetBraking(BRAKE_SPRINT );
 
 	//외적으로 회전방향 구하기
 	if (vActorForwardDirection.Cross(vChangeDirection).Z < 0)

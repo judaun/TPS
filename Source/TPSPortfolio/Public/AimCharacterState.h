@@ -17,6 +17,7 @@ public:
 	void Move() override;
 	void CalculateSpeed(float DeltaSeconds) override;
 	void Turn(float DeltaSeconds) override;
+	void LocoMotionDirection();
 	void Enter() override;
 	void Exit() override;
 };

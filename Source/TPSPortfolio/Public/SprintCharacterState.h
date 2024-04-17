@@ -19,4 +19,6 @@ public:
 	void Turn(float DeltaSeconds) override;
 	void Enter() override;
 	void Exit() override;
+private:
+	float fDegree;
 };

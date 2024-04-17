@@ -61,8 +61,11 @@ void ATPSPortfolioCharacter::initialize()
 
 	vChangeDirection = GetActorForwardVector();
 	vLerpDirection = vChangeDirection;
+	vControlVectorX = FVector(1.f, 0.f, 0.f);
+	vControlVectorY = FVector(1.f, 0.f, 0.f);
 
 	fCrossAngle = 0.f;
+	fYCrossAngle = 0.f;
 	fTurnSpeed = 360.f;
 	fDefaultWalkSpeed = 150.f;
 	fRunSpeed = 450.f;
@@ -73,6 +76,7 @@ void ATPSPortfolioCharacter::initialize()
 	bIsMoving = false;
 	bIsBraking = false;
 	bIsAiming = false;
+	bIsAimTurn = false;
 
 	//auto stState = new IdleState();
 	//auto stState = new IdleCharacterState(this);
@@ -129,6 +133,14 @@ FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
 	return IsFoward ?
 		 FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X):
 		 FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+}
+
+FVector ATPSPortfolioCharacter::GetControlVectorLastUpdated(bool IsFoward)
+{
+	// get forward vector
+	return IsFoward ?
+		vControlVectorX :
+		vControlVectorY;
 }
 
 float ATPSPortfolioCharacter::GetWalkSpeed()
@@ -194,6 +206,9 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		vControlVectorX = ForwardDirection;
+		vControlVectorY = RightDirection;
 
 		//움직임에 따른 회전 방향값 지정
 		SetMoveDirection(ForwardDirection, RightDirection, MovementVector);

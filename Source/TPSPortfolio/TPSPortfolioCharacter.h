@@ -12,7 +12,7 @@
 #define BRAKE_RUN 0.5f
 #define BRAKE_SPRINT 0.7f
 #define RUN_CONDITION 400
-#define SPRINT_CONDITION 600
+#define SPRINT_CONDITION 750
 #define WALKSPEED_DECLEASE 400.f
 #define BRAKE_DECLEASE 900.f
 #define IDLE_DECLEASE 550.f
@@ -114,10 +114,16 @@ public:
 	float GetCrossAngle() { return fCrossAngle; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetYCrossAngle() { return fYCrossAngle; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	float GetFowardValue() { return fFowardValue; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
-	float GetisAiming() { return bIsAiming; }
+	bool GetisAiming() { return bIsAiming; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetisAimTurn() { return bIsAimTurn; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	eCharacterState GetCharacterState();
@@ -126,6 +132,7 @@ public:
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
 	FVector GetControlVector(bool IsFoward = true);
+	FVector GetControlVectorLastUpdated(bool IsFoward = true);
 
 	float GetDefaultWalkSpeed() { return fDefaultWalkSpeed; }
 	float GetDefaultRunSpeed() { return fRunSpeed; }
@@ -137,21 +144,25 @@ public:
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
+	void SetYCrossAngle(float YCrossAngle) { fYCrossAngle = YCrossAngle; }
 	void SetIsBraking(bool IsBraking) {bIsBraking = IsBraking;}
 	void SetIsMoving(bool IsMoving) { bIsMoving = IsMoving;}
 	void SetWalkSpeed(float WalkSpeed);
 	void SetBrakeSpeed(float BrakeSpeed);
 	void SetIsAiming(bool IsAiming) { bIsAiming = IsAiming; }
 	void SetFowardValue(float FowardValue) { fFowardValue = FowardValue; }
-
+	void SetIsAimTurn(bool IsAimTurn) { bIsAimTurn = IsAimTurn; }
 	void SetBraking(float fTime);
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
+	FVector vControlVectorX;
+	FVector vControlVectorY;
 	FVector vChangeDirection;
 	FVector vLerpDirection;
 
 	float fCrossAngle;
+	float fYCrossAngle;
 	float fFowardValue;
 	float fTurnSpeed;
 	float fDefaultWalkSpeed;
@@ -164,4 +175,5 @@ private:
 	bool bIsMoving;
 	bool bIsBraking;
 	bool bIsAiming;
+	bool bIsAimTurn;
 };

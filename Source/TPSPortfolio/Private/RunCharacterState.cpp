@@ -25,7 +25,7 @@ void RunCharacterState::Move()
 {
 	if (pCharacter == nullptr) return;
 
-	pCharacter->AddMovementInput(pCharacter->GetWalkSpeed() > RUN_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
+	pCharacter->AddMovementInput(pCharacter->GetWalkSpeed() > SPRINT_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
 }
 
 void RunCharacterState::CalculateSpeed(float DeltaSeconds)
@@ -33,7 +33,7 @@ void RunCharacterState::CalculateSpeed(float DeltaSeconds)
 	if (pCharacter == nullptr) return;
 
 	pCharacter->SetBrakeSpeed(IDLE_DECLEASE);
-	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), pCharacter->GetDefaultRunSpeed(), DeltaSeconds, WALKSPEED_DECLEASE));
+	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), pCharacter->GetDefaultRunSpeed(), DeltaSeconds, BRAKE_DECLEASE));
 }
 
 void RunCharacterState::Turn(float DeltaSeconds)
@@ -47,8 +47,6 @@ void RunCharacterState::Turn(float DeltaSeconds)
 	float fDegree = FMath::RadiansToDegrees(dArccosRadian);
 
 	float fCurrentWalkSpeed = pCharacter->GetWalkSpeed();
-
-	if (fDegree > MAX_TURN_DGREE && fCurrentWalkSpeed > RUN_CONDITION) pCharacter->SetBraking(BRAKE_RUN);
 
 	//외적으로 회전방향 구하기
 	if (vActorForwardDirection.Cross(vChangeDirection).Z < 0)
