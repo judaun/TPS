@@ -8,6 +8,8 @@ AimCharacterState::AimCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
 	eState = eCharacterState::AIM;
+	fTimer = 0.f;
+	bIsTimeOut = false;
 }
 
 AimCharacterState::~AimCharacterState()
@@ -17,6 +19,7 @@ AimCharacterState::~AimCharacterState()
 void AimCharacterState::Update(float DeltaSeconds)
 {
 	CalculateSpeed(DeltaSeconds);
+	TimerTurn(DeltaSeconds);
 	Turn(DeltaSeconds);
 	Move();
 }
@@ -46,13 +49,22 @@ void AimCharacterState::Turn(float DeltaSeconds)
 
 	double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
 	float fDegree = FMath::RadiansToDegrees(dArccosRadian);
+	float fAcross = vActorForwardDirection.Cross(vChangeDirection).Z;
 
-	if (pCharacter->GetIsMoving() || pCharacter->GetisAimTurn()) {
+	if (fDegree > MINIMUM_TURN_DEGREE && bIsTimeOut)
+	{
+		SetTimer(1.f);
+		pCharacter->SetFowardValue(fAcross < 0 ? -fDegree : fDegree);
+		UE_LOG(LogTemp, Log, TEXT("fDegree : %f"), fDegree);
+	}
+	else if(fDegree < ALLOW_TURN_DEGREE)
+		pCharacter->SetIsAimTurn(false);
+
+	bool bIsMoving = pCharacter->GetIsMoving();
+	if (bIsMoving || pCharacter->GetisAimTurn()) {
 		//외적으로 회전방향 구하기
-		if (vActorForwardDirection.Cross(vChangeDirection).Z < 0)
-			fDegree *= -1;
-
-		double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, TURN_SPEED);
+		
+		double rTurnRot = FMath::FInterpConstantTo(0, fAcross < 0 ? -fDegree : fDegree, DeltaSeconds, bIsMoving ? TURN_SPEED *2.f : TURN_SPEED/1.5f);
 		pCharacter->AddActorWorldRotation(FRotator(0, rTurnRot, 0));
 	}
 
@@ -80,11 +92,7 @@ void AimCharacterState::LocoMotionDirection()
 	pCharacter->SetYCrossAngle(fChangingDegree);
 	pCharacter->SetCrossAngle(vControlDirection.Cross(vChangeControlDirection).Z);
 
-	UE_LOG(LogTemp, Log, TEXT("fChangingDegree : %f"), fChangingDegree);
-
-	float fControlAcos = -vControlYDirection.Cross(vChangeControlDirection).Z;
-
-	pCharacter->SetFowardValue(fControlAcos < 0 ? -1.f : 1.f);
+	//UE_LOG(LogTemp, Log, TEXT("fChangingDegree : %f"), fChangingDegree);
 }
 
 void AimCharacterState::Enter()
@@ -99,4 +107,22 @@ void AimCharacterState::Exit()
 	if (pCharacter == nullptr) return;
 	pCharacter->SetWalkSpeed(0.f);
 	pCharacter->SetIsAiming(false);
+}
+
+void AimCharacterState::TimerTurn(float DeltaSeconds)
+{
+	if (fTimer > 0.f)
+		fTimer -= DeltaSeconds;
+
+	if (fTimer <= 0.f && !bIsTimeOut)
+	{
+		pCharacter->SetIsAimTurn(true);
+		bIsTimeOut = true;
+	}
+}
+
+void AimCharacterState::SetTimer(float TimerTime)
+{
+	fTimer = TimerTime;
+	bIsTimeOut = false;
 }

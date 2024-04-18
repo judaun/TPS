@@ -32,6 +32,6 @@ void IdleCharacterState::CalculateSpeed(float DeltaSeconds)
 {
 	if (pCharacter == nullptr) return;
 
-	pCharacter->SetBrakeSpeed(IDLE_DECLEASE);
-	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), 0.f, DeltaSeconds, IDLE_DECLEASE));
+	pCharacter->SetBrakeSpeed(BRAKE_DECLEASE);
+	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), 0.f, DeltaSeconds, BRAKE_DECLEASE));
 }
