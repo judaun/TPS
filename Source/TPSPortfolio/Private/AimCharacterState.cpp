@@ -55,7 +55,6 @@ void AimCharacterState::Turn(float DeltaSeconds)
 	{
 		SetTimer(1.f);
 		pCharacter->SetFowardValue(fAcross < 0 ? -fDegree : fDegree);
-		UE_LOG(LogTemp, Log, TEXT("fDegree : %f"), fDegree);
 	}
 	else if(fDegree < ALLOW_TURN_DEGREE)
 		pCharacter->SetIsAimTurn(false);
@@ -78,21 +77,18 @@ void AimCharacterState::LocoMotionDirection()
 	FVector vChangeControlDirection = pCharacter->GetChangeVector();
 	FVector vControlDirection = pCharacter->GetControlVectorLastUpdated();
 	FVector vControlYDirection = pCharacter->GetControlVectorLastUpdated(false);
-
-	//float fChangingDegree = FMath::RadiansToDegrees(FMath::Acos(vControlYDirection.Dot(vChangeControlDirection)));
-	float fChangingDegree = FMath::RadiansToDegrees(FMath::Acos(vControlDirection.Dot(vChangeControlDirection))) * 2.f;
-	if (fChangingDegree < 1.f)
-		fChangingDegree = 1.f;
-	if (fChangingDegree > 359.f)
-		fChangingDegree = 359.f;
-
+	
+	//오리엔테이션워핑 각도 구하기
+	float fChangingDegree = FMath::RadiansToDegrees(FMath::Acos(vControlDirection.Dot(vChangeControlDirection)))*2.f;
+	
+	//범위제한 1~359
+	fChangingDegree = clamp(fChangingDegree, 1.f, 359.f);
+	
 	if (vControlDirection.Cross(vChangeControlDirection).Z < 0)
 		fChangingDegree *= -1.f;
 
 	pCharacter->SetYCrossAngle(fChangingDegree);
 	pCharacter->SetCrossAngle(vControlDirection.Cross(vChangeControlDirection).Z);
-
-	//UE_LOG(LogTemp, Log, TEXT("fChangingDegree : %f"), fChangingDegree);
 }
 
 void AimCharacterState::Enter()
