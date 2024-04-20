@@ -9,41 +9,24 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
 #include "IdleCharacterState.h"
 #include "RunCharacterState.h"
 #include "BrakeCharacterState.h"
 #include "SprintCharacterState.h"
 #include "AimCharacterState.h"
+#include "AWeapon.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
 
 ATPSPortfolioCharacter::ATPSPortfolioCharacter()
 {
-	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
-	// Don't rotate when the controller rotates. Let that just affect the camera.
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
+	InitializeDefaultComponent();
+	InitializeInputContext();
+	InitializeMeshComponent();
 
-	//initialize
 	initialize();
-
-	// Create a camera boom (pulls in towards the player if there is a collision)
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
-	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
-
-	// Create a follow camera
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
-	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
 ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
@@ -53,6 +36,11 @@ ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
 
 void ATPSPortfolioCharacter::initialize()
 {
+	// Don't rotate when the controller rotates. Let that just affect the camera.
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = 0.f;
@@ -89,6 +77,89 @@ void ATPSPortfolioCharacter::initialize()
 	stCharacterState = vecState[0].get();
 }
 
+void ATPSPortfolioCharacter::InitializeInputContext()
+{
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> FObj_InputContext(TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default"));
+	if (FObj_InputContext.Succeeded())
+	{
+		UE_LOG(LogTemp, Log, TEXT("InputTest"));
+		DefaultMappingContext = FObj_InputContext.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Jump
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Jump.IA_Jump"));
+	if (IA_Jump.Succeeded())
+		JumpAction = IA_Jump.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Aim
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Aim.IA_Aim"));
+	if (IA_Aim.Succeeded())
+		AimAction = IA_Aim.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Look
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Look.IA_Look"));
+	if (IA_Look.Succeeded())
+		LookAction = IA_Look.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Move
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Move.IA_Move"));
+	if (IA_Move.Succeeded())
+		MoveAction = IA_Move.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Run
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Run.IA_Run"));
+	if (IA_Run.Succeeded())
+		RunAction = IA_Run.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Sprint
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Sprint.IA_Sprint"));
+	if (IA_Sprint.Succeeded())
+		SprintAction = IA_Sprint.Object;
+}
+
+void ATPSPortfolioCharacter::InitializeMeshComponent()
+{
+	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
+	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -90.f), FRotator(0.f, 270.f, 0.f));
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FObj_Skmesh(TEXT("/Game/Characters/PlayerCharacters/Vepley/Mesh/Vepley.Vepley"));
+	if (FObj_Skmesh.Succeeded())
+	{
+		GetMesh()->SetSkeletalMesh(FObj_Skmesh.Object);
+		GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	}
+
+	ConstructorHelpers::FClassFinder<UAnimInstance> FObj_Anim(TEXT("Blueprint'/Game/Characters/PlayerCharacters/Vepley/ABP_Vepley.ABP_Vepley_C'"));
+	if (FObj_Anim.Succeeded())
+	{
+		GetMesh()->SetAnimInstanceClass(FObj_Anim.Class);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> FObj_Physics(TEXT("/Game/Characters/PlayerCharacters/Vepley/Mesh/Vepleysize10_Physics.Vepleysize10_Physics"));
+	if (FObj_Physics.Succeeded())
+	{
+		UE_LOG(LogTemp, Log, TEXT("PhysicExist"));
+		GetMesh()->SetPhysicsAsset(FObj_Physics.Object);
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->SetCollisionProfileName(TEXT("TPSCharacter"));
+	}
+}
+
+void ATPSPortfolioCharacter::InitializeDefaultComponent()
+{
+	// Set size for collision capsule
+	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
+	// Create a camera boom (pulls in towards the player if there is a collision)
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
+	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+
+	// Create a follow camera
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
+	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+}
+
 void ATPSPortfolioCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -101,6 +172,16 @@ void ATPSPortfolioCharacter::BeginPlay()
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+	}
+
+
+	FName WeaponSocket(TEXT("r_hand_socket"));
+	auto Weapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
+	//UE_LOG(LogTemp, Log, TEXT("SpawnActor"));
+	if (GetMesh()->DoesSocketExist(WeaponSocket))
+	{
+		UE_LOG(LogTemp, Log, TEXT("SocketExist"));
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
 	}
 }
 

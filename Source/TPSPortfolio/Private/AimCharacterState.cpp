@@ -87,6 +87,7 @@ void AimCharacterState::LocoMotionDirection()
 	if (vControlDirection.Cross(vChangeControlDirection).Z < 0)
 		fChangingDegree *= -1.f;
 
+	UE_LOG(LogTemp, Log, TEXT("fChangingDegree: %f"), fChangingDegree);
 	pCharacter->SetYCrossAngle(fChangingDegree);
 	pCharacter->SetCrossAngle(vControlDirection.Cross(vChangeControlDirection).Z);
 }

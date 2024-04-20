@@ -34,7 +34,7 @@ class ATPSPortfolioCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
-	
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
@@ -69,7 +69,9 @@ public:
 
 private:
 	void initialize();
-
+	void InitializeInputContext();
+	void InitializeMeshComponent();
+	void InitializeDefaultComponent();
 protected:
 	void Move(const FInputActionValue& Value);
 	void MoveComplete();
