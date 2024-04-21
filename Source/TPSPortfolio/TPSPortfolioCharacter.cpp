@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "TPSPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -15,6 +16,7 @@
 #include "BrakeCharacterState.h"
 #include "SprintCharacterState.h"
 #include "AimCharacterState.h"
+#include "CrossHair.h"
 #include "AWeapon.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -51,6 +53,7 @@ void ATPSPortfolioCharacter::initialize()
 	vLerpDirection = vChangeDirection;
 	vControlVectorX = FVector(1.f, 0.f, 0.f);
 	vControlVectorY = FVector(1.f, 0.f, 0.f);
+	vAimPosition = FVector(1.f, 0.f, 0.f);
 
 	fCrossAngle = 0.f;
 	fYCrossAngle = 0.f;
@@ -137,7 +140,6 @@ void ATPSPortfolioCharacter::InitializeMeshComponent()
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> FObj_Physics(TEXT("/Game/Characters/PlayerCharacters/Vepley/Mesh/Vepleysize10_Physics.Vepleysize10_Physics"));
 	if (FObj_Physics.Succeeded())
 	{
-		UE_LOG(LogTemp, Log, TEXT("PhysicExist"));
 		GetMesh()->SetPhysicsAsset(FObj_Physics.Object);
 		GetMesh()->SetSimulatePhysics(true);
 		GetMesh()->SetCollisionProfileName(TEXT("TPSCharacter"));
@@ -151,8 +153,9 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
+	CameraBoom->TargetArmLength = 350.0f; // The camera follows at this distance behind the character	
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	CameraBoom->SocketOffset = FVector(0.f, 45.f, 70.f);
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -176,12 +179,20 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 
 	FName WeaponSocket(TEXT("r_hand_socket"));
-	auto Weapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
-	//UE_LOG(LogTemp, Log, TEXT("SpawnActor"));
-	if (GetMesh()->DoesSocketExist(WeaponSocket))
+	pCurWeapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
+
+	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
 	{
-		UE_LOG(LogTemp, Log, TEXT("SocketExist"));
-		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+	}
+
+	if (ATPSPlayerController* TPSController = Cast<ATPSPlayerController>(Controller))
+	{
+		if (TPSController->CrossHairHUDWidget != nullptr)
+		{
+			Cast<UCrossHair>(TPSController->CrossHairHUDWidget)->BindUserAimRate(this);
+		}
+			
 	}
 }
 
@@ -189,7 +200,7 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	Timer(DeltaSeconds);
-	SlideGround(DeltaSeconds);
+	CameraControl(DeltaSeconds);
 	UpdateState(DeltaSeconds);
 }
 
@@ -315,6 +326,13 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+
+		//if (bIsAiming)
+		//{
+		//	const FRotator rotControl = Controller->GetControlRotation();
+		//	const FRotator rotControl_Pitch(rotControl.Pitch, 0, 0);
+		//	fAimAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::UpVector.Dot(rotControl_Pitch.Vector()))) / 180.f;
+		//}
 	}
 }
 
@@ -394,6 +412,51 @@ void ATPSPortfolioCharacter::Turn(float DeltaSeconds)
 
 }
 
+void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
+{
+	if (FollowCamera == nullptr)
+		return;
+
+	float fCurFOV = FollowCamera->FieldOfView;
+	float fTargetFOV = bIsAiming ? 90.f : 100.f;
+	float fLerpFOV = FMath::FInterpTo(fCurFOV, fTargetFOV, DeltaSeconds, CAMERA_FOV_SPEED);
+	FollowCamera->SetFieldOfView(fLerpFOV);
+
+	float fCurLength = CameraBoom->TargetArmLength;
+	float fTargetLength = bIsAiming ? 200.f : 350.f;
+	float fLerpLength = FMath::FInterpTo(fCurLength, fTargetLength, DeltaSeconds, CAMERA_FOV_SPEED);
+	CameraBoom->TargetArmLength = fLerpLength;
+
+	FVector vCurCamera = CameraBoom->SocketOffset;
+	FVector vTarget = bIsAiming ? FVector(0.f, 60.f, 80.f) : FVector(0.f, 45.f ,70.f);
+	FVector vLerp = FMath::VInterpConstantTo(vCurCamera, vTarget, DeltaSeconds, CAMERA_FOV_SPEED);
+	
+	CameraBoom->SocketOffset = vLerp;
+
+	//----------------------LayTrace-------------------------
+	if (!bIsAiming) return;
+
+	FVector vecWorldLocation = FollowCamera->GetComponentLocation();
+	FVector vecCameraLook = Controller->GetControlRotation().Vector();
+	FVector vecTarget = vecWorldLocation + vecCameraLook * 3000.f;
+	FHitResult FHresult;
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(this);
+	if (GetWorld()->LineTraceSingleByChannel(FHresult, vecWorldLocation, vecTarget, ECollisionChannel::ECC_OverlapAll_Deprecated, collisionParams))
+		vAimPosition = FHresult.Location;
+	else
+		vAimPosition = vecTarget;
+
+	FVector vTargetPos = GetActorLocation();
+	vTargetPos.Z += 60.f;
+	const FRotator rotControl = (vAimPosition- vTargetPos).GetSafeNormal().Rotation();
+	const FRotator rotControl_Pitch(rotControl.Pitch, 0, 0);
+	fAimAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::UpVector.Dot(rotControl_Pitch.Vector()))) / 180.f;
+
+	//DrawDebugLine(GetWorld(), vecWorldLocation, vecTarget, FColor::Red, false, 1.0f);
+	//UE_LOG(LogTemp, Log, TEXT("Distance : %f"), FHresult.Distance);
+}
+
 void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
 {
 	float fMaxSpeed = bIsBraking ? 0.f : !bIsMoving ? 0.f : bIsSprint ? fSprintSpeed : bIsRun ? fRunSpeed : fDefaultWalkSpeed;
@@ -404,6 +467,25 @@ void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
 	GetCharacterMovement()->MaxWalkSpeed = FMath::FInterpConstantTo(GetCharacterMovement()->MaxWalkSpeed, fMaxSpeed, DeltaSeconds, fLerpSpeed);
 
 	UE_LOG(LogTemp, Log, TEXT("MaxSpeed : %f, LerpSpeed : %f"), GetCharacterMovement()->MaxWalkSpeed, fLerpSpeed);
+}
+
+void ATPSPortfolioCharacter::SetAimRate(eCharacterState eChangeState)
+{
+	float fAimrate = 0.f;
+	switch (eChangeState)
+	{
+	case eCharacterState::IDLE :
+	case eCharacterState::BRAKE: fAimrate = 1.f;
+		break;
+	case eCharacterState::RUN: fAimrate = bIsAiming ? 0.5f : 2.f;
+		break;
+	case eCharacterState::SPRINT: fAimrate = bIsAiming ? 1.f : 3.f;
+		break;
+
+	case eCharacterState::AIM: fAimrate = 0.f;
+		break;
+	}
+	func_Player_Aimrate.ExecuteIfBound(fAimrate);
 }
 
 void ATPSPortfolioCharacter::SetBraking(float fTime)
@@ -437,6 +519,8 @@ void ATPSPortfolioCharacter::UpdateState(float DeltaSeconds)
 void ATPSPortfolioCharacter::ChangeState(eCharacterState eChangeState)
 {
 	if (stCharacterState == nullptr || stCharacterState->eState == eChangeState) return;
+
+	SetAimRate(eChangeState);
 
 	if ((bIsBraking || bIsAiming) && eChangeState != eCharacterState::IDLE)
 		return;

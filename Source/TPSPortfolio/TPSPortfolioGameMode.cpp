@@ -2,6 +2,7 @@
 
 #include "TPSPortfolioGameMode.h"
 #include "TPSPortfolioCharacter.h"
+#include "TPSPlayerController.h"
 #include "UObject/ConstructorHelpers.h"
 
 ATPSPortfolioGameMode::ATPSPortfolioGameMode()
@@ -15,4 +16,5 @@ ATPSPortfolioGameMode::ATPSPortfolioGameMode()
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}*/
 	DefaultPawnClass = ATPSPortfolioCharacter::StaticClass();
+	PlayerControllerClass = ATPSPlayerController::StaticClass();
 }

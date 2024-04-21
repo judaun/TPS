@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 #include "Kismet/GameplayStatics.h"
 #include "CharacterState.h"
+#include "AWeapon.h"
 #include "TPSPortfolioCharacter.generated.h"
 
 #define BRAKE_RUN 0.5f
@@ -19,8 +20,15 @@
 #define MAX_TURN_DGREE 120.f
 #define SPRINT_TURN_DCREASE 300.f
 #define TURN_SPEED 360.f
+#define CAMERA_FOV_SPEED 5.f
+#define IDLE_AIMRATE 1.f
+#define AIM_AIMRATE 0.f
+#define RUN_AIMRATE 1.f
+#define SPRINT_AIMRATE 2.f
 
 using namespace std;
+
+DECLARE_DELEGATE_OneParam(FDele_Player_Aimrate, float);
 
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
@@ -83,11 +91,12 @@ protected:
 	void AimComplete();
 	void Attack();
 	void AttackComplete();
-
+	
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
-			
+	void CameraControl(float DeltaSeconds);
 	void CaculateTotalWalkSpeed(float DeltaSeconds);
+	void SetAimRate(eCharacterState eChangeState);
 
 	void Timer(float DeltaSeconds);
 	void SlideGround(float DeltaSeconds);
@@ -119,6 +128,9 @@ public:
 	float GetYCrossAngle() { return fYCrossAngle; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetAimAngle() { return fAimAngle; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	float GetFowardValue() { return fFowardValue; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
@@ -135,6 +147,7 @@ public:
 	FVector GetLerpVector() { return vLerpDirection; }
 	FVector GetControlVector(bool IsFoward = true);
 	FVector GetControlVectorLastUpdated(bool IsFoward = true);
+	FVector GetAimPosVector() {return vAimPosition;}
 
 	float GetDefaultWalkSpeed() { return fDefaultWalkSpeed; }
 	float GetDefaultRunSpeed() { return fRunSpeed; }
@@ -158,13 +171,17 @@ public:
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
+
+	AWeapon* pCurWeapon;
 	FVector vControlVectorX;
 	FVector vControlVectorY;
 	FVector vChangeDirection;
 	FVector vLerpDirection;
+	FVector vAimPosition;
 
 	float fCrossAngle;
 	float fYCrossAngle;
+	float fAimAngle;
 	float fFowardValue;
 	float fTurnSpeed;
 	float fDefaultWalkSpeed;
@@ -178,4 +195,6 @@ private:
 	bool bIsBraking;
 	bool bIsAiming;
 	bool bIsAimTurn;
+public:
+	FDele_Player_Aimrate func_Player_Aimrate;
 };

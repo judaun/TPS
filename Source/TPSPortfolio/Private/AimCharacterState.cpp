@@ -45,16 +45,20 @@ void AimCharacterState::Turn(float DeltaSeconds)
 	if (pCharacter == nullptr) return;
 
 	const FVector vActorForwardDirection = pCharacter->GetActorForwardVector();
-	const FVector vChangeDirection = pCharacter->GetControlVector(true);
+	
+	FVector vTargetPos = pCharacter->GetAimPosVector()- pCharacter->GetActorLocation();
+	vTargetPos.Z = 0;
+	const FVector vChangeDirection = vTargetPos.GetSafeNormal();
 
 	double dArccosRadian = FMath::Acos(vActorForwardDirection.Dot(vChangeDirection));
 	float fDegree = FMath::RadiansToDegrees(dArccosRadian);
-	float fAcross = vActorForwardDirection.Cross(vChangeDirection).Z;
+	if(vActorForwardDirection.Cross(vChangeDirection).Z<0)
+		fDegree*=-1.f;
 
-	if (fDegree > MINIMUM_TURN_DEGREE && bIsTimeOut)
+	if (abs(fDegree) > ALLOW_TURN_DEGREE)
 	{
-		SetTimer(1.f);
-		pCharacter->SetFowardValue(fAcross < 0 ? -fDegree : fDegree);
+		pCharacter->SetIsAimTurn(true);
+		pCharacter->SetFowardValue(fDegree);
 	}
 	else if(fDegree < ALLOW_TURN_DEGREE)
 		pCharacter->SetIsAimTurn(false);
@@ -63,7 +67,7 @@ void AimCharacterState::Turn(float DeltaSeconds)
 	if (bIsMoving || pCharacter->GetisAimTurn()) {
 		//외적으로 회전방향 구하기
 		
-		double rTurnRot = FMath::FInterpConstantTo(0, fAcross < 0 ? -fDegree : fDegree, DeltaSeconds, bIsMoving ? TURN_SPEED *2.f : TURN_SPEED/1.5f);
+		double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, bIsMoving ? TURN_SPEED *2.f : TURN_SPEED/1.5f);
 		pCharacter->AddActorWorldRotation(FRotator(0, rTurnRot, 0));
 	}
 
@@ -87,7 +91,6 @@ void AimCharacterState::LocoMotionDirection()
 	if (vControlDirection.Cross(vChangeControlDirection).Z < 0)
 		fChangingDegree *= -1.f;
 
-	UE_LOG(LogTemp, Log, TEXT("fChangingDegree: %f"), fChangingDegree);
 	pCharacter->SetYCrossAngle(fChangingDegree);
 	pCharacter->SetCrossAngle(vControlDirection.Cross(vChangeControlDirection).Z);
 }

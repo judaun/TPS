@@ -53,7 +53,6 @@ void RunCharacterState::Turn(float DeltaSeconds)
 
 	pCharacter->SetLerpVector(vLerpDirection.RotateAngleAxis(rLerpTurnRot, FVector::UpVector));
 	pCharacter->SetCrossAngle(vActorForwardDirection.Cross(vLerpDirection).Z);
-	UE_LOG(LogTemp, Log, TEXT("Cross : %f"), vActorForwardDirection.Cross(vLerpDirection).Z);
 
 	pCharacter->AddActorWorldRotation(FRotator(0, rTurnRot, 0));
 }
