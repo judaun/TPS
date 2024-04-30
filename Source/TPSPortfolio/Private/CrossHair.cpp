@@ -11,7 +11,7 @@ void UCrossHair::NativeConstruct()
 	UICross_T = Cast<UImage>(GetWidgetFromName(TEXT("Cross_T")));
 	UICross_B = Cast<UImage>(GetWidgetFromName(TEXT("Cross_B")));
 
-	fAimrate = 1.f;
+	fAimrate = 0.f;
 	fTarget_Aimrate = 1.f;
 }
 

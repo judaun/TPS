@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "CharacterState.h"
 #include "AWeapon.h"
+#include "Inventory.h"
 #include "TPSPortfolioCharacter.generated.h"
 
 #define BRAKE_RUN 0.5f
@@ -70,6 +71,9 @@ class ATPSPortfolioCharacter : public ACharacter
 	/** Aim Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* AimAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
+	UInventory* pInventory;
 
 public:
 	ATPSPortfolioCharacter();
