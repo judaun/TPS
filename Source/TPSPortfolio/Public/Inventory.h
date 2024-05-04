@@ -4,10 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Item.h"
-#include "Equipment.h"
-#include "TPSEnum.h"
 #include "Inventory.generated.h"
+
+class Item;
+class Equipment;
+class AWeapon;
+struct FItemTable;
+struct FEquipmentTable;
+enum class EItemType : uint8;
+enum class EEquipmentType : uint8;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class TPSPORTFOLIO_API UInventory : public UActorComponent
@@ -32,9 +37,10 @@ public:
 	void AddItem(FItemTable* itemdata, int32 itemcnt);
 	bool UseItem(FItemTable* itemdata, int32 itemcnt = 1);
 
-	void LoadItem();
-	void FindItem();
-
+	void AddEquip(FEquipmentTable* equipdata);
+	AWeapon* LoadWeapon(int32 weaponindex);
+	void UnLoadWeapon(FEquipmentTable* equipdata);
 private:
-	TMap<ItemType, TArray<TSharedPtr<Item>>> mInventory;
+	TMap<EItemType, TArray<TSharedPtr<Item>>> mInventory;
+	TMap<EEquipmentType, TArray<TSharedPtr<Equipment>>> mEquipInventory;
 };

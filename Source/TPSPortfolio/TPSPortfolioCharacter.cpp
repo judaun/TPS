@@ -34,6 +34,8 @@ ATPSPortfolioCharacter::ATPSPortfolioCharacter()
 ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
 {
 	vecState.clear();
+	func_Player_Bulletrate.Unbind();
+	func_Player_Aimrate.Clear();
 	if (pCurWeapon != nullptr && IsValid(pCurWeapon))
 	{
 		pCurWeapon->Destroy();
@@ -121,6 +123,16 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Sprint.IA_Sprint"));
 	if (IA_Sprint.Succeeded())
 		SprintAction = IA_Sprint.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Attack
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Attack.IA_Attack"));
+	if (IA_Attack.Succeeded())
+		AttackAction = IA_Attack.Object;
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Reload
+	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload.IA_Reload"));
+	if (IA_Reload.Succeeded())
+		ReloadAction = IA_Reload.Object;
 }
 
 void ATPSPortfolioCharacter::InitializeMeshComponent()
@@ -185,7 +197,9 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 
 	FName WeaponSocket(TEXT("r_hand_socket"));
-	pCurWeapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
+	pCurWeapon = pInventory->LoadWeapon(0);
+	pCurWeapon->SetPlayer(this);
+	//pCurWeapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
 
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
 	{
@@ -208,7 +222,6 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 	CameraControl(DeltaSeconds);
 	UpdateState(DeltaSeconds);
 }
-
 
 eCharacterState ATPSPortfolioCharacter::GetCharacterState()
 {
@@ -284,6 +297,15 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		//Aiming
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Aim);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AimComplete);
+	
+		//Attacking
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Attack);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AttackComplete);
+
+		//Reloading
+		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Reload);
+		//EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AttackComplete);
+
 	}
 
 }
@@ -353,12 +375,34 @@ void ATPSPortfolioCharacter::AimComplete()
 
 void ATPSPortfolioCharacter::Attack()
 {
-
+	if (nullptr == pCurWeapon) return;
+	pCurWeapon->AttackStart();
+	UE_LOG(LogTemp, Log, TEXT("%f"), pCurWeapon->GetBulletrate());
+	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
 }
 
 void ATPSPortfolioCharacter::AttackComplete()
 {
+	if (nullptr == pCurWeapon) return;
+	UE_LOG(LogTemp, Log, TEXT("AttackStop"));
+	pCurWeapon->AttackStop();
+}
 
+void ATPSPortfolioCharacter::Reload()
+{
+	if (nullptr == pCurWeapon) return;
+	if (pCurWeapon->IsFullCapacity()) return;
+	if (!pCurWeapon->IsPosibleReload()) return;
+
+	bIsReloading = true;
+}
+
+void ATPSPortfolioCharacter::ReloadComplete()
+{
+	bIsReloading = false;
+	if (nullptr == pCurWeapon) return;
+	pCurWeapon->Reload();
+	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
@@ -439,7 +483,12 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 	CameraBoom->SocketOffset = vLerp;
 
 	//----------------------LayTrace-------------------------
-	if (!bIsAiming) return;
+	if (!bIsAiming)
+	{
+		fAimAngle = 0.f;
+		return;
+	}
+
 
 	FVector vecWorldLocation = FollowCamera->GetComponentLocation();
 	FVector vecCameraLook = Controller->GetControlRotation().Vector();
@@ -456,10 +505,16 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 	vTargetPos.Z += 60.f;
 	const FRotator rotControl = (vAimPosition- vTargetPos).GetSafeNormal().Rotation();
 	const FRotator rotControl_Pitch(rotControl.Pitch, 0, 0);
-	fAimAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::UpVector.Dot(rotControl_Pitch.Vector()))) / 180.f;
+	const FVector vControlPitch = rotControl_Pitch.Vector();
+	const FRotator rotActor = GetActorForwardVector().Rotation();
+	const FRotator rotActor_Pitch(rotActor.Pitch, 0, 0);
+	const FVector vActorPitch = rotActor_Pitch.Vector();
+	fAimAngle = FMath::RadiansToDegrees(FMath::Acos(vActorPitch.Dot(vControlPitch)));
+	if (vActorPitch.Cross(vControlPitch).Y < 0.f)
+		fAimAngle *= -1.f;
 
 	//DrawDebugLine(GetWorld(), vecWorldLocation, vecTarget, FColor::Red, false, 1.0f);
-	//UE_LOG(LogTemp, Log, TEXT("Distance : %f"), FHresult.Distance);
+	//UE_LOG(LogTemp, Log, TEXT("fAimAngle : %f"), fAimAngle);
 }
 
 void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
@@ -471,7 +526,7 @@ void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
 
 	GetCharacterMovement()->MaxWalkSpeed = FMath::FInterpConstantTo(GetCharacterMovement()->MaxWalkSpeed, fMaxSpeed, DeltaSeconds, fLerpSpeed);
 
-	UE_LOG(LogTemp, Log, TEXT("MaxSpeed : %f, LerpSpeed : %f"), GetCharacterMovement()->MaxWalkSpeed, fLerpSpeed);
+	//UE_LOG(LogTemp, Log, TEXT("MaxSpeed : %f, LerpSpeed : %f"), GetCharacterMovement()->MaxWalkSpeed, fLerpSpeed);
 }
 
 void ATPSPortfolioCharacter::SetAimRate(eCharacterState eChangeState)
@@ -490,7 +545,8 @@ void ATPSPortfolioCharacter::SetAimRate(eCharacterState eChangeState)
 	case eCharacterState::AIM: fAimrate = 0.f;
 		break;
 	}
-	func_Player_Aimrate.ExecuteIfBound(fAimrate);
+	if(func_Player_Aimrate.IsBound())
+	func_Player_Aimrate.Broadcast(fAimrate);
 }
 
 void ATPSPortfolioCharacter::SetBraking(float fTime)

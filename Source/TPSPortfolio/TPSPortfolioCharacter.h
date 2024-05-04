@@ -29,7 +29,8 @@
 
 using namespace std;
 
-DECLARE_DELEGATE_OneParam(FDele_Player_Aimrate, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_Aimrate, float);
+DECLARE_DELEGATE_OneParam(FDele_Player_Bulletrate, float);
 
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
@@ -72,6 +73,14 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* AimAction;
 
+	/** Attack Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* AttackAction;
+
+	/** Reload Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ReloadAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
 
@@ -95,6 +104,7 @@ protected:
 	void AimComplete();
 	void Attack();
 	void AttackComplete();
+	void Reload();
 	
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
@@ -142,6 +152,18 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	bool GetisAimTurn() { return bIsAimTurn; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetisAttacking() { return bIsAttacking; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	void SetAttacking(bool IsAttacking) { bIsAttacking = IsAttacking;  }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetisReloading() { return bIsReloading; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	void ReloadComplete();
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	eCharacterState GetCharacterState();
@@ -199,6 +221,13 @@ private:
 	bool bIsBraking;
 	bool bIsAiming;
 	bool bIsAimTurn;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
+	bool bIsAttacking;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
+	bool bIsReloading;
 public:
 	FDele_Player_Aimrate func_Player_Aimrate;
+	FDele_Player_Bulletrate func_Player_Bulletrate;
 };
