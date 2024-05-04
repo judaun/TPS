@@ -6,11 +6,14 @@
 void UCrossHair::NativeConstruct()
 {
 	Super::NativeConstruct();
+	UIBullet_Progress = Cast<UImage>(GetWidgetFromName(TEXT("Bullet_Progress")));
 	UICross_L = Cast<UImage>(GetWidgetFromName(TEXT("Cross_L")));
 	UICross_R = Cast<UImage>(GetWidgetFromName(TEXT("Cross_R")));
 	UICross_T = Cast<UImage>(GetWidgetFromName(TEXT("Cross_T")));
 	UICross_B = Cast<UImage>(GetWidgetFromName(TEXT("Cross_B")));
 
+	pMaterial = UIBullet_Progress->GetDynamicMaterial();
+	
 	fAimrate = 0.f;
 	fTarget_Aimrate = 1.f;
 }
@@ -47,8 +50,14 @@ void UCrossHair::SetAimRate(float Aimrate)
 	fTarget_Aimrate = Aimrate;
 }
 
+void UCrossHair::SetBulletProgress(float remainpercent)
+{
+	pMaterial->SetScalarParameterValue(TEXT("Percent"), remainpercent);
+}
+
 void UCrossHair::BindUserAimRate(ATPSPortfolioCharacter* TPSCharacter)
 {
 	if(TPSCharacter == nullptr) return;
-	TPSCharacter->func_Player_Aimrate.BindUObject(this, &UCrossHair::SetAimRate);
+	TPSCharacter->func_Player_Aimrate.AddUObject(this, &UCrossHair::SetAimRate);
+	TPSCharacter->func_Player_Bulletrate.BindUObject(this, &UCrossHair::SetBulletProgress);
 }
