@@ -198,6 +198,7 @@ private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
 
+	UPROPERTY()
 	AWeapon* pCurWeapon;
 	FVector vControlVectorX;
 	FVector vControlVectorY;

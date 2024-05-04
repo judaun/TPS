@@ -12,6 +12,14 @@ AWeapon::AWeapon() : Equipment()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	UE_LOG(LogTemp, Log, TEXT("UCameraShakeBase load"));
+	
+	ConstructorHelpers::FClassFinder<UCameraShakeBase> FCL_CameraShake(TEXT("Blueprint'/Game/ThirdPerson/Blueprints/BP_TPSCameraShake'"));
+	if (FCL_CameraShake.Succeeded())
+	{
+		UE_LOG(LogTemp, Log, TEXT("UCameraShakeBase load Success"));
+		CS_Attack = FCL_CameraShake.Class;
+	}
 
 }
 
@@ -34,6 +42,11 @@ AWeapon::AWeapon(FEquipmentTable* equipdata) : Equipment(equipdata)
 	iCurrentMagazine = equipdata->iBaseMagazine;
 }
 
+
+AWeapon::~AWeapon()
+{
+	
+}
 
 void AWeapon::InitializeMesh(FString weaponaddress)
 {
@@ -164,6 +177,9 @@ void AWeapon::AttackTrace()
 	FRotator rotBullet = pMesh->GetSocketRotation(TEXT("BulletOut"));
 	FVector vBulletOut = pMesh->GetSocketLocation(TEXT("BulletOut"));
 	GetWorld()->SpawnActor<ABullet>(vBulletOut, rotBullet);
+
+
+	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
 }
 
 void AWeapon::Reload()
@@ -182,6 +198,8 @@ void AWeapon::ReloadStart()
 		pMagazine->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		pMagazine->MagazineOut();
 		pMagazine = nullptr;
+
+		iCurrentCapacity = 0;
 	}
 }
 

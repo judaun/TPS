@@ -20,6 +20,7 @@ public:
 	// Sets default values for this actor's properties
 	AWeapon();
 	AWeapon(FEquipmentTable* equipdata);
+	~AWeapon();
 
 private:
 	void InitializeMesh(FString weaponaddress);
@@ -44,12 +45,18 @@ public:
 	bool IsFullCapacity();
 	bool IsPosibleReload();
 private:
+	UPROPERTY()
 	USkeletalMeshComponent* pMesh;
+
 	FCollisionQueryParams collisionParams;
 	FTimerHandle Firetimehandle;
 	TWeakObjectPtr<ATPSPortfolioCharacter> pCharacter;
 	int32 iCurrentCapacity;
 	int32 iCurrentMagazine;
 
+	UPROPERTY()
 	AMagazine* pMagazine;
+
+	UPROPERTY()
+	TSubclassOf<UCameraShakeBase> CS_Attack;
 };

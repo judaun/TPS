@@ -376,8 +376,8 @@ void ATPSPortfolioCharacter::AimComplete()
 void ATPSPortfolioCharacter::Attack()
 {
 	if (nullptr == pCurWeapon) return;
+
 	pCurWeapon->AttackStart();
-	UE_LOG(LogTemp, Log, TEXT("%f"), pCurWeapon->GetBulletrate());
 	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
 }
 
@@ -396,6 +396,7 @@ void ATPSPortfolioCharacter::Reload()
 
 	bIsReloading = true;
 	pCurWeapon->ReloadStart();
+	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
 }
 
 void ATPSPortfolioCharacter::ReloadComplete()

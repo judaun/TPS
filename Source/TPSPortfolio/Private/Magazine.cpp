@@ -10,13 +10,7 @@ AMagazine::AMagazine()
 	PrimaryActorTick.bCanEverTick = true;
 	pMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Magazine"));
 	RootComponent = pMesh;
-	//static ConstructorHelpers::FObjectFinder<UStaticMesh> FObj_Stmesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
-	//if (FObj_Stmesh.Succeeded())
-	//{
-	//	pMesh->SetStaticMesh(FObj_Stmesh.Object);
-	//	//pMesh->SetSimulatePhysics(true);
-	//	pMesh->SetCollisionProfileName(TEXT("MeshEffect"));
-	//}
+
 	bIsDestroy = false;
 	fDestroyTime = 10.f;
 }
