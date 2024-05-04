@@ -395,6 +395,7 @@ void ATPSPortfolioCharacter::Reload()
 	if (!pCurWeapon->IsPosibleReload()) return;
 
 	bIsReloading = true;
+	pCurWeapon->ReloadStart();
 }
 
 void ATPSPortfolioCharacter::ReloadComplete()

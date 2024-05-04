@@ -3,6 +3,7 @@
 
 #include "AWeapon.h"
 #include "Bullet.h"
+#include "Magazine.h"
 #include "TPSPortfolioCharacter.h"
 #include "TPSEnum.h"
 
@@ -69,11 +70,35 @@ FString AWeapon::GetWeaponTypeName(EWeaponType weapontype)
 	}
 }
 
+void AWeapon::InitMagazineMesh(FString magazineaddress)
+{
+	if (!IsValid(pMesh)) return;
+
+	FRotator rotMagazine = pMesh->GetSocketRotation(TEXT("magazineSocket"));
+	FVector vMagazine = pMesh->GetSocketLocation(TEXT("magazineSocket"));
+
+
+	FTransform SpawnTransform(rotMagazine, vMagazine);
+	pMagazine = GetWorld()->SpawnActorDeferred<AMagazine>(AMagazine::StaticClass(), SpawnTransform);
+	if (pMagazine)
+	{
+		pMagazine->DeferredInitialize(magazineaddress);
+		pMagazine->FinishSpawning(SpawnTransform);
+	}
+
+	FName MagazineSocket(TEXT("magazineSocket"));
+	if (pMesh->DoesSocketExist(MagazineSocket) && nullptr != pMagazine)
+	{
+		pMagazine->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale, MagazineSocket);
+	}
+}
+
 // Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	InitMagazineMesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
 }
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
@@ -146,6 +171,18 @@ void AWeapon::Reload()
 	--iCurrentMagazine;
 
 	iCurrentCapacity = FEquipData.iBaseCapacity;
+	InitMagazineMesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
+
+}
+
+void AWeapon::ReloadStart()
+{
+	if (IsValid(pMagazine))
+	{
+		pMagazine->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		pMagazine->MagazineOut();
+		pMagazine = nullptr;
+	}
 }
 
 void AWeapon::AttackStart()

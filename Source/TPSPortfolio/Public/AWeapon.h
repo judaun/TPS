@@ -9,6 +9,7 @@
 
 enum class EWeaponType : uint8;
 class ATPSPortfolioCharacter;
+class AMagazine;
 
 UCLASS()
 class TPSPORTFOLIO_API AWeapon : public AActor , public Equipment
@@ -23,6 +24,7 @@ public:
 private:
 	void InitializeMesh(FString weaponaddress);
 	FString GetWeaponTypeName(EWeaponType weapontype);
+	void InitMagazineMesh(FString magazineaddress);
 
 protected:
 	// Called when the game starts or when spawned
@@ -35,7 +37,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	void AttackTrace();
 	void Reload();
-	void MakeShell();
+	void ReloadStart();
 	void AttackStart();
 	void AttackStop();
 	float GetBulletrate();
@@ -48,4 +50,6 @@ private:
 	TWeakObjectPtr<ATPSPortfolioCharacter> pCharacter;
 	int32 iCurrentCapacity;
 	int32 iCurrentMagazine;
+
+	AMagazine* pMagazine;
 };
