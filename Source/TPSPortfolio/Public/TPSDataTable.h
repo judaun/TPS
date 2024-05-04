@@ -21,10 +21,10 @@ struct FItemTable : public FTableRowBase
 	FString Name;
 
 	UPROPERTY(EditAnywhere)
-	ItemType ItemType;
+	EItemType ItemType;
 
 	UPROPERTY(EditAnywhere)
-	ItemEffType EffectType;
+	EItemEffType EffectType;
 
 	UPROPERTY(EditAnywhere)
 	int32 Value;
@@ -32,6 +32,48 @@ struct FItemTable : public FTableRowBase
 	UPROPERTY(EditAnywhere)
 	float PercentageValue;
 
+};
+
+USTRUCT()
+struct FEquipmentTable : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditAnywhere)
+	int32 Itemkey;
+
+	UPROPERTY(EditAnywhere)
+	FString Name;
+
+	UPROPERTY(EditAnywhere)
+	EEquipmentType EquipType;
+
+	UPROPERTY(EditAnywhere)
+	EWeaponType WeaponType;
+
+	UPROPERTY(EditAnywhere)
+	EProjectileType ProjectileType;
+
+	UPROPERTY(EditAnywhere)
+	int32 iBaseDmg;
+
+	UPROPERTY(EditAnywhere)
+	float fBaseAttInterval;
+
+	UPROPERTY(EditAnywhere)
+	float fBaseAccuracy;
+
+	UPROPERTY(EditAnywhere)
+	float fBaseRange;
+
+	UPROPERTY(EditAnywhere)
+	int32 iBaseCapacity;
+
+	UPROPERTY(EditAnywhere)
+	int32 iBaseMagazine;
+
+	UPROPERTY(EditAnywhere)
+	float fBaseReloadTime;
 };
 
 class TPSPORTFOLIO_API TPSDataTable

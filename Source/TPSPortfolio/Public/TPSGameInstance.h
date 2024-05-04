@@ -28,9 +28,12 @@ private:
 public:
 	FItemTable* GetItemData(int32 key);
 	TArray<FItemTable*> GetItemData_ALL();
-
+	FEquipmentTable* GetEquipmentData(int32 key);
+	TArray<FEquipmentTable*> GetEquipmentData_ALL();
 
 private:
 	UPROPERTY()
 	UDataTable* DT_Item;
+	UPROPERTY()
+	UDataTable* DT_Equipment;
 };

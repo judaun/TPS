@@ -67,7 +67,7 @@ void AimCharacterState::Turn(float DeltaSeconds)
 	if (bIsMoving || pCharacter->GetisAimTurn()) {
 		//외적으로 회전방향 구하기
 		
-		double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, bIsMoving ? TURN_SPEED *2.f : TURN_SPEED/1.5f);
+		double rTurnRot = FMath::FInterpConstantTo(0, fDegree, DeltaSeconds, TURN_SPEED);
 		pCharacter->AddActorWorldRotation(FRotator(0, rTurnRot, 0));
 	}
 

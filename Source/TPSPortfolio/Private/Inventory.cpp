@@ -3,6 +3,10 @@
 #include "TPSGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "TPSDataTable.h"
+#include "Item.h"
+#include "TPSEnum.h"
+#include "Equipment.h"
+#include "AWeapon.h"
 #include "Inventory.h"
 
 // Sets default values for this component's properties
@@ -26,6 +30,16 @@ UInventory::~UInventory()
 		}
 	}
 	mInventory.Reset();
+
+	for (auto map_elem : mEquipInventory)
+	{
+		for (auto vec_elem : map_elem.Value)
+		{
+			vec_elem.Reset();
+		}
+	}
+	mEquipInventory.Reset();
+
 }
 
 // Called when the game starts
@@ -56,6 +70,12 @@ void UInventory::InitializeInventory()
 	for (auto vec_elem : Itemdata)
 	{
 		AddItem(vec_elem,0);
+	}
+
+	TArray<FEquipmentTable*> Equipdata = pGameInstance->GetEquipmentData_ALL();
+	for (auto vec_elem : Equipdata)
+	{
+		AddEquip(vec_elem);
 	}
 }
 
@@ -105,12 +125,49 @@ bool UInventory::UseItem(FItemTable* itemdata, int32 itemcnt)
 	return false;
 }
 
-void UInventory::LoadItem()
-{
 
+void UInventory::AddEquip(FEquipmentTable* equipdata)
+{
+	auto TA_Equip = mEquipInventory.Find(equipdata->EquipType);
+	if (nullptr == TA_Equip)
+	{
+		//Inventory에 TArray 구축 전
+		TArray<TSharedPtr<Equipment>> newArray;
+		newArray.Emplace(MakeShared<Equipment>(equipdata));
+		mEquipInventory.Add(equipdata->EquipType, newArray);
+	}
+	else
+	{
+		TA_Equip->Emplace(MakeShared<Equipment>(equipdata));
+	}
 }
 
-void UInventory::FindItem()
+AWeapon* UInventory::LoadWeapon(int32 weaponindex)
+{
+	auto TA_Equip = mEquipInventory.Find(EEquipmentType::EQUIP_MAIN_WEAPON);
+	if (nullptr == TA_Equip) return nullptr;
+	if (TA_Equip->Num() < weaponindex + 1) return nullptr;
+
+	int32 iItemkey =(*TA_Equip)[weaponindex]->GetItemKey();
+	
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (nullptr == pGameInstance)
+		return nullptr;
+
+	FEquipmentTable* Itemdata = pGameInstance->GetEquipmentData(iItemkey);
+
+	FTransform SpawnTransform(FRotator::ZeroRotator, FVector::ZeroVector);
+	auto pWeapon = GetWorld()->SpawnActorDeferred<AWeapon>(AWeapon::StaticClass(), SpawnTransform);
+	if (pWeapon)
+	{
+		pWeapon->DeferredInitialize(Itemdata);
+		pWeapon->FinishSpawning(SpawnTransform);
+	}
+	
+	return pWeapon;
+}
+
+void UInventory::UnLoadWeapon(FEquipmentTable* equipdata)
 {
 
 }
