@@ -11,6 +11,8 @@
 enum class EWeaponType : uint8;
 class ATPSPortfolioCharacter;
 class AMagazine;
+class UNiagaraSystem;
+class UNiagaraComponent;
 
 UCLASS()
 class TPSPORTFOLIO_API AWeapon : public AActor , public Equipment
@@ -55,6 +57,9 @@ public:
 	void OnRecoilTimelineFinish();
 
 private:
+	void SetSpawnDecal(FVector Location, FRotator Rotator);
+
+private:
 	UPROPERTY()
 	USkeletalMeshComponent* pMesh;
 
@@ -77,6 +82,17 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Timeline", Meta = (AllowPrivateAccess = "true"))
 	UCurveVector* CameraRecoilCurve;
+
+	UPROPERTY(EditAnywhere, Category = "Firing")
+	UNiagaraSystem* FireEffectMuzzle;
+	UPROPERTY(EditAnywhere, Category = "Firing")
+	UNiagaraComponent* pNiagaraCom;
+
+	UPROPERTY(EditAnywhere, Category = "Hit")
+	UNiagaraSystem* HitEffect;
+
+	UPROPERTY()
+	UMaterial* pDecalMaterial;
 
 	UPROPERTY()
 	FTimeline RecoilTimeline;

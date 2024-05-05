@@ -7,6 +7,10 @@
 #include "TPSPortfolioCharacter.h"
 #include "Curves/CurveVector.h"
 #include "TPSEnum.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Engine/DecalActor.h"
+#include "Components/DecalComponent.h"
 
 #define MAXIMUM_RECOIL_POS 100
 
@@ -29,6 +33,12 @@ AWeapon::AWeapon() : Equipment()
 	{
 		UE_LOG(LogTemp, Log, TEXT("CameraRecoilCurve load Success"));
 		CameraRecoilCurve = FOBJ_Curve.Object;
+	}
+
+	ConstructorHelpers::FObjectFinder<UMaterial> FOBJ_MatBulletHole(TEXT("/Script/Engine.Material'/Game/Effects/M_BulletHole.M_BulletHole'"));
+	if (FOBJ_MatBulletHole.Succeeded())
+	{
+		pDecalMaterial = FOBJ_MatBulletHole.Object;
 	}
 
 	fPitchRecoil = 0.f;
@@ -75,6 +85,17 @@ void AWeapon::InitializeMesh(FString weaponaddress)
 
 	pMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
+	FireEffectMuzzle = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_GunFire.FX_GunFire'")));
+	if (FireEffectMuzzle)
+	{
+		pNiagaraCom = UNiagaraFunctionLibrary::SpawnSystemAttached(FireEffectMuzzle, pMesh, TEXT("BulletStart"), FVector(0.f), FRotator(0.f), EAttachLocation::Type::KeepRelativeOffset, false);
+		if (pNiagaraCom)
+		{
+			pNiagaraCom->Deactivate();
+			
+		}
+	}
+	HitEffect = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, TEXT("Script/Niagara.NiagaraSystem'/Game/Effects/FX_GunHit.FX_GunHit'")));
 }
 
 FString AWeapon::GetWeaponTypeName(EWeaponType weapontype)
@@ -143,6 +164,7 @@ void AWeapon::BeginPlay()
 	
 	InitMagazineMesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
 	InitTimeLine();
+	
 }
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
@@ -213,8 +235,8 @@ void AWeapon::AttackTrace()
 	const UWorld* currentWorld = GetWorld();
 	FHitResult hitResult;
 
-	UE_LOG(LogTemp, Log, TEXT("AttTrace"));
-	DrawDebugLine(currentWorld, vfireStart, vfireEnd, FColor::Red, false, 0.3f);
+	//UE_LOG(LogTemp, Log, TEXT("AttTrace"));
+	//DrawDebugLine(currentWorld, vfireStart, vfireEnd, FColor::Red, false, 0.3f);
 	if (currentWorld->LineTraceSingleByChannel(hitResult, vfireStart, vfireEnd, ECC_Visibility, collisionParams))
 	{
 		if (hitResult.GetActor())
@@ -222,6 +244,7 @@ void AWeapon::AttackTrace()
 			auto hitActor = hitResult.GetActor();
 			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
 		}
+		SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
 	}
 
 	FRotator rotBullet = pMesh->GetSocketRotation(TEXT("BulletOut"));
@@ -232,6 +255,12 @@ void AWeapon::AttackTrace()
 	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
 	
 	RecoilTimeline.PlayFromStart();
+	if (pNiagaraCom)
+	{
+		pNiagaraCom->SetWorldRotation(vDir.Rotation());
+		pNiagaraCom->Activate(true);
+	}
+	
 }
 
 void AWeapon::Reload()
@@ -342,5 +371,23 @@ void AWeapon::OnCameraRecoilProgress(FVector CameraRecoil)
 void AWeapon::OnRecoilTimelineFinish()
 {
 	//UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
+}
+
+void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator)
+{
+	if (HitEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HitEffect, Location, Rotator, FVector(0.5f), true);
+	}
+
+	if (nullptr == pDecalMaterial) return;
+	Rotator.Pitch += 90;
+	ADecalActor* pDecalActor = GetWorld()->SpawnActor<ADecalActor>(Location, Rotator);
+	if (!IsValid(pDecalActor)) return;
+
+	pDecalActor->SetDecalMaterial(pDecalMaterial);
+	pDecalActor->SetLifeSpan(5.f);
+	pDecalActor->GetDecal()->DecalSize = FVector(4.f, 4.f, 4.f);
+	pDecalActor->GetDecal()->FadeScreenSize = 0.002f;
 }
 
