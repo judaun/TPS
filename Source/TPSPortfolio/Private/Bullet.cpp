@@ -32,7 +32,6 @@ void ABullet::BeginPlay()
 	//RootComponent->AddRelativeLocation(fBulletPos*10.f);
 	//pMesh->AddVelocityChangeImpulseAtLocation(fBulletPos*10.f, FVector::ZeroVector);
 	
-	srand((uint32)time(NULL));
 	int32 irand = rand();
 	fBulletPos = (GetActorRightVector()*2.f + GetActorUpVector()).GetSafeNormal();
 	pMesh->AddImpulseAtLocation(fBulletPos*((int)irand % 5 + 10),FVector((int)irand%100-50, (int)irand % 100 - 50,0.f));

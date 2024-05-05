@@ -6,6 +6,8 @@
 UTPSGameInstance::UTPSGameInstance()
 {
 	Initialize_DataTable();
+
+	srand((uint32)time(NULL));
 }
 
 UTPSGameInstance::~UTPSGameInstance()

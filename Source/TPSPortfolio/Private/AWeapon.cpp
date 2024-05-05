@@ -8,6 +8,8 @@
 #include "Curves/CurveVector.h"
 #include "TPSEnum.h"
 
+#define MAXIMUM_RECOIL_POS 100
+
 // Sets default values
 AWeapon::AWeapon() : Equipment()
 {
@@ -31,6 +33,7 @@ AWeapon::AWeapon() : Equipment()
 
 	fPitchRecoil = 0.f;
 	fYawRecoil = 0.f;
+	fAimRate = 0.f;
 }
 
 
@@ -144,7 +147,9 @@ void AWeapon::BeginPlay()
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
 {
+	if (nullptr == character) return;
 	pCharacter = TWeakObjectPtr<ATPSPortfolioCharacter>(character);
+	pCharacter->func_Player_Aimrate.AddUObject(this, &AWeapon::SetAimRate);
 }
 
 void AWeapon::DeferredInitialize(FEquipmentTable* equipdata)
@@ -198,7 +203,8 @@ void AWeapon::AttackTrace()
 	if (pCharacter.IsValid())
 	{
 		pCharacter->SetAttacking(true);
-		vDir = (pCharacter->GetAimPosVector() - vfireStart).GetSafeNormal();
+		FVector vAimPos = pCharacter->GetAimPosVector() + GetAimrateRecoilPosition();
+		vDir = (vAimPos - vfireStart).GetSafeNormal();
 	}
 		
 	
@@ -224,21 +230,7 @@ void AWeapon::AttackTrace()
 
 
 	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
-
-
-	/*if (fPitchRecoil > -5.f)
-	{
-		float m_fPitchRecoil = -(float)(rand() % 500 + 400) / 1000.f;
-		fPitchRecoil += m_fPitchRecoil;
-		GetWorld()->GetFirstPlayerController()->AddPitchInput(m_fPitchRecoil);
-	}
-
-	float m_fYawRecoil = (float)(rand() % 400 - 200) / 1000.f;
-
-	fYawRecoil += m_fYawRecoil;
-
-	GetWorld()->GetFirstPlayerController()->AddYawInput(m_fYawRecoil);*/
-
+	
 	RecoilTimeline.PlayFromStart();
 }
 
@@ -302,6 +294,29 @@ float AWeapon::GetBulletrate()
 	return  clamp(fRemainrate, 0.f, 1.f);
 }
 
+FVector AWeapon::GetAimrateRecoilPosition()
+{
+	float fX = 0.f;
+	float fY = 0.f;
+	float fZ = 0.f;
+
+	float fCharacterAimrate = fAimRate * 0.5f; // 0 ~ 0.5
+	float fWeaponAimrate = 1.f - (FEquipData.fBaseAccuracy/1000.f); // 0 ~ 1
+	float fMaxlen = MAXIMUM_RECOIL_POS * (fCharacterAimrate + fWeaponAimrate) +1; // 1000 * (0~1.5)+zerodivideº¸Á¤
+
+	fX = rand() % (int)fMaxlen;
+	fY = rand() % (int)fMaxlen;
+	fZ = rand() % (int)fMaxlen;
+
+	fX *= rand() % 2 == 0 ? -1.f : 1.f;
+	fY *= rand() % 2 == 0 ? -1.f : 1.f;
+	fZ *= rand() % 2 == 0 ? -1.f : 1.f;
+
+	UE_LOG(LogTemp, Log, TEXT("MaxLen :%f, X:%f, Y:%f, Z:%f"), fMaxlen, fX, fY, fZ);
+
+	return FVector(fX, fY, fZ);
+}
+
 bool AWeapon::IsFullCapacity()
 {
 	return iCurrentCapacity >= FEquipData.iBaseCapacity;
@@ -326,6 +341,6 @@ void AWeapon::OnCameraRecoilProgress(FVector CameraRecoil)
 
 void AWeapon::OnRecoilTimelineFinish()
 {
-	UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
+	//UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
 }
 

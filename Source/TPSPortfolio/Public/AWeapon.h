@@ -42,7 +42,9 @@ public:
 	void ReloadStart();
 	void AttackStart();
 	void AttackStop();
+	void SetAimRate(float aimrate) { fAimRate = aimrate; };
 	float GetBulletrate();
+	FVector GetAimrateRecoilPosition();
 	bool IsFullCapacity();
 	bool IsPosibleReload();
 
@@ -58,12 +60,14 @@ private:
 
 	FCollisionQueryParams collisionParams;
 	FTimerHandle Firetimehandle;
+	UPROPERTY()
 	TWeakObjectPtr<ATPSPortfolioCharacter> pCharacter;
 	int32 iCurrentCapacity;
 	int32 iCurrentMagazine;
 
 	float fPitchRecoil;
 	float fYawRecoil;
+	float fAimRate;
 
 	UPROPERTY()
 	AMagazine* pMagazine;
@@ -74,6 +78,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Timeline", Meta = (AllowPrivateAccess = "true"))
 	UCurveVector* CameraRecoilCurve;
 
+	UPROPERTY()
 	FTimeline RecoilTimeline;
 	float RecoilRecoveryTime;
 	float CurrentRecoilRecoveryTime;
