@@ -480,7 +480,7 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 
 	FVector vCurCamera = CameraBoom->SocketOffset;
 	FVector vTarget = bIsAiming ? FVector(0.f, 60.f, 80.f) : FVector(0.f, 45.f ,70.f);
-	FVector vLerp = FMath::VInterpConstantTo(vCurCamera, vTarget, DeltaSeconds, CAMERA_FOV_SPEED);
+	FVector vLerp = FMath::VInterpTo(vCurCamera, vTarget, DeltaSeconds, CAMERA_FOV_SPEED);
 	
 	CameraBoom->SocketOffset = vLerp;
 

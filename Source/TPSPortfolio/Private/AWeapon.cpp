@@ -5,6 +5,7 @@
 #include "Bullet.h"
 #include "Magazine.h"
 #include "TPSPortfolioCharacter.h"
+#include "Curves/CurveVector.h"
 #include "TPSEnum.h"
 
 // Sets default values
@@ -21,6 +22,15 @@ AWeapon::AWeapon() : Equipment()
 		CS_Attack = FCL_CameraShake.Class;
 	}
 
+	ConstructorHelpers::FObjectFinder<UCurveVector> FOBJ_Curve(TEXT("/Script/Engine.CurveVector'/Game/ThirdPerson/Curves/RecoilCurve.RecoilCurve'"));
+	if (FOBJ_Curve.Succeeded())
+	{
+		UE_LOG(LogTemp, Log, TEXT("CameraRecoilCurve load Success"));
+		CameraRecoilCurve = FOBJ_Curve.Object;
+	}
+
+	fPitchRecoil = 0.f;
+	fYawRecoil = 0.f;
 }
 
 
@@ -106,12 +116,30 @@ void AWeapon::InitMagazineMesh(FString magazineaddress)
 	}
 }
 
+void AWeapon::InitTimeLine()
+{
+	if (nullptr == CameraRecoilCurve) return;
+
+	FOnTimelineVector CameraRecoilCallback;
+
+	FOnTimelineEventStatic TimelineFinishCallback;
+
+	CameraRecoilCallback.BindUFunction(this, FName("OnCameraRecoilProgress"));
+	TimelineFinishCallback.BindUFunction(this, FName("OnRecoilTimelineFinish"));
+
+	RecoilTimeline.AddInterpVector(CameraRecoilCurve, CameraRecoilCallback);
+	RecoilTimeline.SetTimelineFinishedFunc(TimelineFinishCallback);
+
+	RecoilTimeline.SetTimelineLength(0.3f);
+}
+
 // Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
 	InitMagazineMesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
+	InitTimeLine();
 }
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
@@ -140,7 +168,23 @@ void AWeapon::DeferredInitialize(FEquipmentTable* equipdata)
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	RecoilTimeline.TickTimeline(DeltaTime);
+	if (fPitchRecoil < 0.f)
+	{
+		fPitchRecoil += DeltaTime*3.f;
+		GetWorld()->GetFirstPlayerController()->AddPitchInput(DeltaTime * 3.f);
+	}
 
+	if (fYawRecoil > 0.1f)
+	{
+		fYawRecoil -= DeltaTime * 3.f;
+		GetWorld()->GetFirstPlayerController()->AddYawInput(DeltaTime * 3.f);
+	}
+	else if (fYawRecoil < -0.1f)
+	{
+		fYawRecoil += DeltaTime * 3.f;
+		GetWorld()->GetFirstPlayerController()->AddYawInput(DeltaTime * 3.f);
+	}
 }
 
 void AWeapon::AttackTrace()
@@ -180,6 +224,22 @@ void AWeapon::AttackTrace()
 
 
 	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
+
+
+	/*if (fPitchRecoil > -5.f)
+	{
+		float m_fPitchRecoil = -(float)(rand() % 500 + 400) / 1000.f;
+		fPitchRecoil += m_fPitchRecoil;
+		GetWorld()->GetFirstPlayerController()->AddPitchInput(m_fPitchRecoil);
+	}
+
+	float m_fYawRecoil = (float)(rand() % 400 - 200) / 1000.f;
+
+	fYawRecoil += m_fYawRecoil;
+
+	GetWorld()->GetFirstPlayerController()->AddYawInput(m_fYawRecoil);*/
+
+	RecoilTimeline.PlayFromStart();
 }
 
 void AWeapon::Reload()
@@ -250,5 +310,22 @@ bool AWeapon::IsFullCapacity()
 bool AWeapon::IsPosibleReload()
 {
 	return iCurrentMagazine > 0;
+}
+
+void AWeapon::OnCameraRecoilProgress(FVector CameraRecoil)
+{
+	float fRecoil_Y = CameraRecoil.Y;
+	fRecoil_Y *= rand() % 2 == 0 ? -1.f : 1.f;
+
+	GetWorld()->GetFirstPlayerController()->AddPitchInput(CameraRecoil.Z);
+	GetWorld()->GetFirstPlayerController()->AddYawInput(fRecoil_Y);
+
+	fPitchRecoil += CameraRecoil.Z;
+	fYawRecoil += fRecoil_Y;
+}
+
+void AWeapon::OnRecoilTimelineFinish()
+{
+	UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
 }
 

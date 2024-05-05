@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Equipment.h"
 #include "GameFramework/Actor.h"
+#include "Components/TimeLineComponent.h"
 #include "AWeapon.generated.h"
 
 enum class EWeaponType : uint8;
@@ -26,7 +27,7 @@ private:
 	void InitializeMesh(FString weaponaddress);
 	FString GetWeaponTypeName(EWeaponType weapontype);
 	void InitMagazineMesh(FString magazineaddress);
-
+	void InitTimeLine();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -44,6 +45,13 @@ public:
 	float GetBulletrate();
 	bool IsFullCapacity();
 	bool IsPosibleReload();
+
+	UFUNCTION()
+	void OnCameraRecoilProgress(FVector CameraRecoil);
+
+	UFUNCTION()
+	void OnRecoilTimelineFinish();
+
 private:
 	UPROPERTY()
 	USkeletalMeshComponent* pMesh;
@@ -54,9 +62,19 @@ private:
 	int32 iCurrentCapacity;
 	int32 iCurrentMagazine;
 
+	float fPitchRecoil;
+	float fYawRecoil;
+
 	UPROPERTY()
 	AMagazine* pMagazine;
 
 	UPROPERTY()
 	TSubclassOf<UCameraShakeBase> CS_Attack;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Timeline", Meta = (AllowPrivateAccess = "true"))
+	UCurveVector* CameraRecoilCurve;
+
+	FTimeline RecoilTimeline;
+	float RecoilRecoveryTime;
+	float CurrentRecoilRecoveryTime;
 };
