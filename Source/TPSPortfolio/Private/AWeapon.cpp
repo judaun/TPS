@@ -316,13 +316,6 @@ void AWeapon::AttackStop()
 	}
 }
 
-float AWeapon::GetBulletrate()
-{
-	float fRemainrate = (float)iCurrentCapacity / (FEquipData.iBaseCapacity == 0 ? 10 : FEquipData.iBaseCapacity);
-	
-	return  clamp(fRemainrate, 0.f, 1.f);
-}
-
 FVector AWeapon::GetAimrateRecoilPosition()
 {
 	float fX = 0.f;

@@ -26,6 +26,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 		UUserWidget* CrossHairHUDWidget;
 
+	/* Reference to the UMG asset in the editor */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+		TSubclassOf<UUserWidget> CharacterHUDWidgetClass;
+
+	/* Variable to hold the widget after creating it */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+		UUserWidget* CharacterHUDWidget;
+
 protected:
 	virtual void BeginPlay() override;
 

@@ -44,8 +44,11 @@ public:
 	void ReloadStart();
 	void AttackStart();
 	void AttackStop();
-	void SetAimRate(float aimrate) { fAimRate = aimrate; };
-	float GetBulletrate();
+	void SetAimRate(float aimrate) { fAimRate = aimrate; }
+	int32 GetCurrentBullet() { return iCurrentCapacity; }
+	int32 GetMaxBullet() { return FEquipData.iBaseCapacity; }
+	int32 GetMagazine() { return iCurrentMagazine; }
+
 	FVector GetAimrateRecoilPosition();
 	bool IsFullCapacity();
 	bool IsPosibleReload();

@@ -30,7 +30,8 @@
 using namespace std;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_Aimrate, float);
-DECLARE_DELEGATE_OneParam(FDele_Player_Bulletrate, float);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDele_Player_Bullet, int32, int32);
+DECLARE_DELEGATE_OneParam(FDele_Player_Magazine, int32);
 
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
@@ -230,5 +231,6 @@ private:
 	bool bIsReloading;
 public:
 	FDele_Player_Aimrate func_Player_Aimrate;
-	FDele_Player_Bulletrate func_Player_Bulletrate;
+	FDele_Player_Bullet func_Player_Bullet;
+	FDele_Player_Magazine func_Player_Magazine;
 };

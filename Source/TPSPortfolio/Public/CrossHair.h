@@ -21,14 +21,19 @@ public:
 public:
 	void AimRate(float Aimrate);
 	void SetAimRate(float Aimrate);
-	void SetBulletProgress(float remainpercent);
+	void SetBulletProgress(int32 currentbullet, int32 maxbullet);
 
 	void BindUserAimRate(ATPSPortfolioCharacter* TPSCharacter);
 private:
+	UPROPERTY()
 	UImage* UIBullet_Progress;
+	UPROPERTY()
 	UImage* UICross_L;
+	UPROPERTY()
 	UImage* UICross_R;
+	UPROPERTY()
 	UImage* UICross_T;
+	UPROPERTY()
 	UImage* UICross_B;
 
 	UMaterialInstanceDynamic* pMaterial;

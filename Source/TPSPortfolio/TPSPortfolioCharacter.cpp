@@ -17,6 +17,7 @@
 #include "SprintCharacterState.h"
 #include "AimCharacterState.h"
 #include "CrossHair.h"
+#include "CharacterHUD.h"
 #include "AWeapon.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -34,8 +35,9 @@ ATPSPortfolioCharacter::ATPSPortfolioCharacter()
 ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
 {
 	vecState.clear();
-	func_Player_Bulletrate.Unbind();
+	func_Player_Bullet.Clear();
 	func_Player_Aimrate.Clear();
+	func_Player_Magazine.Unbind();
 	if (pCurWeapon != nullptr && IsValid(pCurWeapon))
 	{
 		pCurWeapon->Destroy();
@@ -208,11 +210,27 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 	if (ATPSPlayerController* TPSController = Cast<ATPSPlayerController>(Controller))
 	{
-		if (TPSController->CrossHairHUDWidget != nullptr)
+		if (IsValid(TPSController->CrossHairHUDWidget))
 		{
 			Cast<UCrossHair>(TPSController->CrossHairHUDWidget)->BindUserAimRate(this);
+			
 		}	
+		if (IsValid(TPSController->CharacterHUDWidget))
+		{
+			Cast<UCharacterHUD>(TPSController->CharacterHUDWidget)->BindUserData(this);
+		}
 	}
+
+	if (func_Player_Aimrate.IsBound())
+		func_Player_Aimrate.Broadcast(0.f);
+
+	if (IsValid(pCurWeapon))
+	{
+		if (func_Player_Bullet.IsBound())
+			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+	}
+	
 }
 
 void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
@@ -378,7 +396,8 @@ void ATPSPortfolioCharacter::Attack()
 	if (nullptr == pCurWeapon) return;
 
 	pCurWeapon->AttackStart();
-	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
+	if (func_Player_Bullet.IsBound())
+		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 }
 
 void ATPSPortfolioCharacter::AttackComplete()
@@ -396,7 +415,8 @@ void ATPSPortfolioCharacter::Reload()
 
 	bIsReloading = true;
 	pCurWeapon->ReloadStart();
-	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
+	if (func_Player_Bullet.IsBound())
+		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 }
 
 void ATPSPortfolioCharacter::ReloadComplete()
@@ -404,7 +424,9 @@ void ATPSPortfolioCharacter::ReloadComplete()
 	bIsReloading = false;
 	if (nullptr == pCurWeapon) return;
 	pCurWeapon->Reload();
-	func_Player_Bulletrate.ExecuteIfBound(pCurWeapon->GetBulletrate());
+	if (func_Player_Bullet.IsBound())
+		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+	func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)

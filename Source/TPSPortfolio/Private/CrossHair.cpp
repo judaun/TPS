@@ -50,8 +50,10 @@ void UCrossHair::SetAimRate(float Aimrate)
 	fTarget_Aimrate = Aimrate;
 }
 
-void UCrossHair::SetBulletProgress(float remainpercent)
+void UCrossHair::SetBulletProgress(int32 currentbullet, int32 maxbullet)
 {
+	if (maxbullet == 0) maxbullet += 1;
+	float remainpercent = (float)(currentbullet) / maxbullet;
 	pMaterial->SetScalarParameterValue(TEXT("Percent"), remainpercent);
 }
 
@@ -59,5 +61,5 @@ void UCrossHair::BindUserAimRate(ATPSPortfolioCharacter* TPSCharacter)
 {
 	if(TPSCharacter == nullptr) return;
 	TPSCharacter->func_Player_Aimrate.AddUObject(this, &UCrossHair::SetAimRate);
-	TPSCharacter->func_Player_Bulletrate.BindUObject(this, &UCrossHair::SetBulletProgress);
+	TPSCharacter->func_Player_Bullet.AddUObject(this, &UCrossHair::SetBulletProgress);
 }
