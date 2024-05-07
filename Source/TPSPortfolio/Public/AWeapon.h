@@ -101,4 +101,6 @@ private:
 	FTimeline RecoilTimeline;
 	float RecoilRecoveryTime;
 	float CurrentRecoilRecoveryTime;
+
+	float fFireMenual;
 };

@@ -2,17 +2,18 @@
 
 
 #include "TPSGameInstance.h"
+#include "TPSSoundManager.h"
+#include "TPSEnum.h"
 
 UTPSGameInstance::UTPSGameInstance()
 {
 	Initialize_DataTable();
-
+	pSoundMng = CreateDefaultSubobject<ATPSSoundManager>(TEXT("SoundManager"));
 	srand((uint32)time(NULL));
 }
 
 UTPSGameInstance::~UTPSGameInstance()
 {
-
 }
 
 void UTPSGameInstance::Initialize_DataTable()
@@ -58,4 +59,19 @@ TArray<FEquipmentTable*> UTPSGameInstance::GetEquipmentData_ALL()
 	TArray<FEquipmentTable*> TA_EquipData;
 	DT_Equipment->GetAllRows(TEXT(""), TA_EquipData);
 	return TA_EquipData;
+}
+
+void UTPSGameInstance::StartSound(FString soundname, float volume, bool isloop /*= false*/)
+{
+	if (nullptr == pSoundMng) return;
+
+	pSoundMng->StartSound(*soundname, volume, isloop);
+}
+
+void UTPSGameInstance::StartSoundLocation(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume, bool isloop /*= false*/)
+{
+	if (nullptr == pSoundMng) return;
+
+	pSoundMng->StartSoundLocation(*soundname, world, location, atttype, volume, isloop);
+
 }

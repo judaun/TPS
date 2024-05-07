@@ -11,6 +11,7 @@
 #include "NiagaraComponent.h"
 #include "Engine/DecalActor.h"
 #include "Components/DecalComponent.h"
+#include "TPSGameInstance.h"
 
 #define MAXIMUM_RECOIL_POS 100
 
@@ -44,6 +45,7 @@ AWeapon::AWeapon() : Equipment()
 	fPitchRecoil = 0.f;
 	fYawRecoil = 0.f;
 	fAimRate = 0.f;
+	fFireMenual = 0.f;
 }
 
 
@@ -212,12 +214,17 @@ void AWeapon::Tick(float DeltaTime)
 		fYawRecoil += DeltaTime * 3.f;
 		GetWorld()->GetFirstPlayerController()->AddYawInput(DeltaTime * 3.f);
 	}
+
+	if (fFireMenual > 0.f)
+		fFireMenual -= DeltaTime;
 }
 
 void AWeapon::AttackTrace()
 {
 	if (iCurrentCapacity <= 0) return;
 	--iCurrentCapacity;
+
+	fFireMenual += FEquipData.fBaseAttInterval / 1000.f;
 
 	//Bullet spawn pos
 	FVector vfireStart = pMesh->GetSocketLocation(TEXT("BulletStart"));
@@ -261,6 +268,9 @@ void AWeapon::AttackTrace()
 		pNiagaraCom->Activate(true);
 	}
 	
+	
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (nullptr != pGameInstance) pGameInstance->StartSoundLocation(TEXT("9mmShot"), GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
 }
 
 void AWeapon::Reload()
@@ -281,6 +291,9 @@ void AWeapon::ReloadStart()
 		pMagazine = nullptr;
 
 		iCurrentCapacity = 0;
+
+		UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+		if (nullptr != pGameInstance) pGameInstance->StartSoundLocation(TEXT("ReloadHandGun"), GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_2D);
 	}
 }
 
@@ -300,8 +313,9 @@ void AWeapon::AttackStart()
 	switch (FEquipData.ProjectileType)
 	{
 	case EProjectileType::PROJECTILE_TRACE:
-		if(!GetWorldTimerManager().IsTimerActive(Firetimehandle))
-		GetWorldTimerManager().SetTimer(Firetimehandle, [this](){AttackTrace(); }, FEquipData.fBaseAttInterval/1000.f, true, 0.f);
+		if(fFireMenual <= 0.f)AttackTrace();
+		//if (!GetWorldTimerManager().IsTimerActive(Firetimehandle) && fFireMenual<=0.f)
+		//GetWorldTimerManager().SetTimer(Firetimehandle, [this](){AttackTrace(); }, FEquipData.fBaseAttInterval/1000.f, true, 0.f);
 		break;
 	case EProjectileType::PROJECTILE_PROJECTILE:
 		break;

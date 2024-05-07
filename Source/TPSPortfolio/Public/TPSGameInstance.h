@@ -11,6 +11,7 @@
 /**
  * 
  */
+class ATPSSoundManager;
 
 UCLASS()
 class TPSPORTFOLIO_API UTPSGameInstance : public UGameInstance
@@ -31,9 +32,15 @@ public:
 	FEquipmentTable* GetEquipmentData(int32 key);
 	TArray<FEquipmentTable*> GetEquipmentData_ALL();
 
+	void StartSound(FString soundname, float volume = 1.f, bool isloop = false);
+	void StartSoundLocation(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
+
 private:
 	UPROPERTY()
 	UDataTable* DT_Item;
 	UPROPERTY()
 	UDataTable* DT_Equipment;
+
+	UPROPERTY()
+	ATPSSoundManager* pSoundMng;
 };

@@ -2,6 +2,8 @@
 
 
 #include "Magazine.h"
+#include "TPSGameInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AMagazine::AMagazine()
@@ -13,6 +15,7 @@ AMagazine::AMagazine()
 
 	bIsDestroy = false;
 	fDestroyTime = 10.f;
+	bIshitsound = false;
 }
 
 void AMagazine::DeferredInitialize(FString magazineaddress)
@@ -22,6 +25,7 @@ void AMagazine::DeferredInitialize(FString magazineaddress)
 		pMesh->SetStaticMesh(newMesh);
 
 	pMesh->SetCollisionProfileName(TEXT("MeshEffect"));
+	pMesh->SetNotifyRigidBodyCollision(true);
 }
 
 void AMagazine::MagazineOut()
@@ -49,5 +53,16 @@ void AMagazine::Tick(float DeltaTime)
 		if (fDestroyTime < 0.f)
 			Destroy();
 	}
+}
+
+void AMagazine::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (bIshitsound) return;
+
+	bIshitsound = true;
+
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (nullptr != pGameInstance) pGameInstance->StartSoundLocation(TEXT("MagazineDrop"), GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE, 0.2f);
+
 }
 

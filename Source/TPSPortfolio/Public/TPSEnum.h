@@ -40,3 +40,10 @@ enum class EProjectileType : uint8
 {
 	PROJECTILE_TRACE, PROJECTILE_PROJECTILE, PROJECTILE_NONE,
 };
+
+UENUM(BlueprintType)
+
+enum class ESoundAttenuationType : uint8
+{
+	SOUND_LOUD, SOUND_MEDIUM, SOUND_SILENCE, SOUND_2D,
+};
