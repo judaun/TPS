@@ -90,7 +90,7 @@ void AWeapon::InitializeMesh(FString weaponaddress)
 	FireEffectMuzzle = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_GunFire.FX_GunFire'")));
 	if (FireEffectMuzzle)
 	{
-		pNiagaraCom = UNiagaraFunctionLibrary::SpawnSystemAttached(FireEffectMuzzle, pMesh, TEXT("BulletStart"), FVector(0.f), FRotator(0.f), EAttachLocation::Type::KeepRelativeOffset, false);
+		pNiagaraCom = UNiagaraFunctionLibrary::SpawnSystemAttached(FireEffectMuzzle, pMesh, TEXT("Muzzle"), FVector(0.f), FRotator(0.f), EAttachLocation::Type::KeepRelativeOffset, false);
 		if (pNiagaraCom)
 		{
 			pNiagaraCom->Deactivate();
@@ -123,8 +123,8 @@ void AWeapon::InitMagazineMesh(FString magazineaddress)
 {
 	if (!IsValid(pMesh)) return;
 
-	FRotator rotMagazine = pMesh->GetSocketRotation(TEXT("magazineSocket"));
-	FVector vMagazine = pMesh->GetSocketLocation(TEXT("magazineSocket"));
+	FRotator rotMagazine = pMesh->GetSocketRotation(TEXT("MagazineSocket"));
+	FVector vMagazine = pMesh->GetSocketLocation(TEXT("MagazineSocket"));
 
 
 	FTransform SpawnTransform(rotMagazine, vMagazine);
@@ -135,7 +135,7 @@ void AWeapon::InitMagazineMesh(FString magazineaddress)
 		pMagazine->FinishSpawning(SpawnTransform);
 	}
 
-	FName MagazineSocket(TEXT("magazineSocket"));
+	FName MagazineSocket(TEXT("MagazineSocket"));
 	if (pMesh->DoesSocketExist(MagazineSocket) && nullptr != pMagazine)
 	{
 		pMagazine->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale, MagazineSocket);
@@ -180,10 +180,10 @@ void AWeapon::DeferredInitialize(FEquipmentTable* equipdata)
 {
 	if (nullptr == equipdata)
 		return;
-
+	///Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'
 	SetData(equipdata);
 	FString strTypeName = GetWeaponTypeName(equipdata->WeaponType);
-	FString meshaddress = FString::Printf(TEXT("/Script/Engine.SkeletalMesh'/Game/Props/Meshes/%s/%s.%s'"), *strTypeName, *equipdata->Name, *equipdata->Name);
+	FString meshaddress = FString::Printf(TEXT("Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'"), *strTypeName, *equipdata->Name, *equipdata->Name);
 	InitializeMesh(meshaddress);
 
 	collisionParams.AddIgnoredActor(this);
@@ -227,7 +227,7 @@ void AWeapon::AttackTrace()
 	fFireMenual += FEquipData.fBaseAttInterval / 1000.f;
 
 	//Bullet spawn pos
-	FVector vfireStart = pMesh->GetSocketLocation(TEXT("BulletStart"));
+	FVector vfireStart = pMesh->GetSocketLocation(TEXT("Muzzle"));
 	FVector vDir;
 	if (pCharacter.IsValid())
 	{
@@ -254,8 +254,8 @@ void AWeapon::AttackTrace()
 		SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
 	}
 
-	FRotator rotBullet = pMesh->GetSocketRotation(TEXT("BulletOut"));
-	FVector vBulletOut = pMesh->GetSocketLocation(TEXT("BulletOut"));
+	FRotator rotBullet = pMesh->GetSocketRotation(TEXT("ShellEject"));
+	FVector vBulletOut = pMesh->GetSocketLocation(TEXT("ShellEject"));
 	GetWorld()->SpawnActor<ABullet>(vBulletOut, rotBullet);
 
 
