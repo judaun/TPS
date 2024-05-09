@@ -8,7 +8,7 @@
 SprintCharacterState::SprintCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
-	eState = eCharacterState::SPRINT;
+	eState = ECharacterState::SPRINT;
 	fDegree = 0.f;
 }
 

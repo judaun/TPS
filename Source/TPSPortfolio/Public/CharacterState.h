@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TPSEnum.h"
 /**
  * 
  */
-UENUM(BlueprintType)
-enum eCharacterState { IDLE, RUN, SPRINT, BRAKE, AIM };
+
 #define MINIMUM_WALKSPEED 50.f
 
 class ATPSPortfolioCharacter;
@@ -26,5 +26,5 @@ public:
 	virtual void Exit() {}
 public:
 	ATPSPortfolioCharacter* pCharacter;
-	eCharacterState eState;
+	ECharacterState eState;
 };

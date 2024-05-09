@@ -26,6 +26,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	void StartSoundLocation(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
+	void StartSoundLocationRandomPitch(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
 	void StartSound(FString soundname, float volume = 1.f, bool isloop = false);
 private:
 	void AddSound(FString keyname, FString soundaddress);

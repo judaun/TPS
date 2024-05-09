@@ -47,3 +47,12 @@ enum class ESoundAttenuationType : uint8
 {
 	SOUND_LOUD, SOUND_MEDIUM, SOUND_SILENCE, SOUND_2D,
 };
+
+UENUM(BlueprintType)
+enum class ECharacterState : uint8 { IDLE, RUN, SPRINT, BRAKE, AIM };
+
+UENUM(BlueprintType)
+enum class EWeaponMontageState : uint8 
+{ 
+	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, 
+};

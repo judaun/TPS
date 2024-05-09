@@ -8,7 +8,7 @@
 RunCharacterState::RunCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
-	eState = eCharacterState::RUN;
+	eState = ECharacterState::RUN;
 }
 
 RunCharacterState::~RunCharacterState()

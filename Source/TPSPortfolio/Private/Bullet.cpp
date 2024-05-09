@@ -24,6 +24,7 @@ ABullet::ABullet()
 		pMesh->SetNotifyRigidBodyCollision(true);
 	}
 	fDestroyTime = 10.f;
+	bIsShotShell = false;
 	bIshitsound = false;
 }
 
@@ -56,11 +57,21 @@ void ABullet::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class 
 {
 	
 	if (bIshitsound) return;
+	FString strSoundName;
 
-	int irand = rand() % 3;
+	if (bIsShotShell)
+	{
+		strSoundName = TEXT("ShotShellSound");
+	}
+	else
+	{
+		int irand = rand() % 3;
+		strSoundName = FString::Printf(TEXT("ShellSound%i"), irand + 1);
+	}
+	
 
 	bIshitsound = true;
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (nullptr != pGameInstance) pGameInstance->StartSoundLocation(FString::Printf(TEXT("ShellSound%i"), irand + 1), GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE, 0.5f);
+	if (nullptr != pGameInstance) pGameInstance->StartSoundLocation(*strSoundName, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE, 0.5f);
 	
 }

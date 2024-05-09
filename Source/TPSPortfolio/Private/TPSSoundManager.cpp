@@ -37,6 +37,18 @@ void ATPSSoundManager::StartSoundLocation(FString soundname, const UObject* worl
 	}
 }
 
+void ATPSSoundManager::StartSoundLocationRandomPitch(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume, bool isloop /*= false*/)
+{
+	float fRandPitch = (float)(rand() % 3 - 1) / 20.f + 1.f;
+	UE_LOG(LogTemp, Log, TEXT("%f"), fRandPitch);
+	auto pFindSound = mapSound.Find(*soundname);
+	if (nullptr != pFindSound)
+	{
+		auto pFindAtt = mapSoundAttenuation.Find(atttype);
+		UGameplayStatics::PlaySoundAtLocation(world, *pFindSound, location, volume, fRandPitch, 0.f, pFindAtt == nullptr ? nullptr : *pFindAtt);
+	}
+}
+
 void ATPSSoundManager::StartSound(FString soundname, float volume, bool isloop /*= false*/)
 {
 	auto pFindSound = mapSound.Find(*soundname);
@@ -73,11 +85,15 @@ void ATPSSoundManager::InitSound()
 	AddAttenuation(ESoundAttenuationType::SOUND_SILENCE, TEXT("/Script/Engine.SoundAttenuation'/Game/SilenceAttenuation.SilenceAttenuation'"));
 	AddAttenuation(ESoundAttenuationType::SOUND_2D, TEXT("/Script/Engine.SoundAttenuation'/Game/2DAttenuation.2DAttenuation'"));
 	///Script/Engine.SoundAttenuation'/Game/2DAttenuation.2DAttenuation'
-	AddSound(TEXT("9mmShot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/9mmPistolShot.9mmPistolShot'"));
+	AddSound(TEXT("Pistol_Shot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Pistol_Shot.Pistol_Shot'"));
+	AddSound(TEXT("Rifle_Shot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Rifle_Shot.Rifle_Shot'"));
+	AddSound(TEXT("Shotgun_Shot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Shotgun_Shot.Shotgun_Shot'"));
+
 	AddSound(TEXT("ReloadHandGun"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Reload.Reload'"));
 	AddSound(TEXT("ShellSound1"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShellSound1.ShellSound1'"));
 	AddSound(TEXT("ShellSound2"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShellSound2.ShellSound2'"));
 	AddSound(TEXT("ShellSound3"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShellSound3.ShellSound3'"));
+	AddSound(TEXT("ShotShellSound"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShotShellSound.ShotShellSound'"));
 	AddSound(TEXT("MagazineDrop"), TEXT("Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'"));
 	///Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'
 }

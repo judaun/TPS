@@ -87,7 +87,8 @@ void AWeapon::InitializeMesh(FString weaponaddress)
 
 	pMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
-	FireEffectMuzzle = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_GunFire.FX_GunFire'")));
+	FString strFireEffName = FString::Printf(TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_%sFire.FX_%sFire'"), *FEquipData.Name, *FEquipData.Name);
+	FireEffectMuzzle = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, *strFireEffName));
 	if (FireEffectMuzzle)
 	{
 		pNiagaraCom = UNiagaraFunctionLibrary::SpawnSystemAttached(FireEffectMuzzle, pMesh, TEXT("Muzzle"), FVector(0.f), FRotator(0.f), EAttachLocation::Type::KeepRelativeOffset, false);
@@ -119,9 +120,11 @@ FString AWeapon::GetWeaponTypeName(EWeaponType weapontype)
 	}
 }
 
-void AWeapon::InitMagazineMesh(FString magazineaddress)
+void AWeapon::InitMagazineMesh()
 {
 	if (!IsValid(pMesh)) return;
+
+	FString magazineaddress = FString::Printf(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/%s_Magazine.%s_Magazine'"), *FEquipData.Name, *FEquipData.Name);
 
 	FRotator rotMagazine = pMesh->GetSocketRotation(TEXT("MagazineSocket"));
 	FVector vMagazine = pMesh->GetSocketLocation(TEXT("MagazineSocket"));
@@ -164,9 +167,9 @@ void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	InitMagazineMesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
+	InitMagazineMesh();
 	InitTimeLine();
-	
+
 }
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
@@ -185,6 +188,11 @@ void AWeapon::DeferredInitialize(FEquipmentTable* equipdata)
 	FString strTypeName = GetWeaponTypeName(equipdata->WeaponType);
 	FString meshaddress = FString::Printf(TEXT("Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'"), *strTypeName, *equipdata->Name, *equipdata->Name);
 	InitializeMesh(meshaddress);
+
+	//USkeletalMesh* newMesh = Cast< USkeletalMesh >(StaticLoadObject(USkeletalMesh::StaticClass(), NULL, *weaponaddress));
+	FString strAnimAddress = FString::Printf(TEXT("/Script/Engine.AnimSequence'/Game/Props/Lyra/%s/Animations/%s_Fire.%s_Fire'"), *strTypeName, *equipdata->Name, *equipdata->Name);
+	pShotAnim = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), NULL, *strAnimAddress));
+	
 
 	collisionParams.AddIgnoredActor(this);
 	collisionParams.AddIgnoredActor(GetOwner());
@@ -229,48 +237,62 @@ void AWeapon::AttackTrace()
 	//Bullet spawn pos
 	FVector vfireStart = pMesh->GetSocketLocation(TEXT("Muzzle"));
 	FVector vDir;
-	if (pCharacter.IsValid())
+	int32 iFirecnt = FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN ? 10 : 1;
+	for (int32 i = 0; i < iFirecnt; ++i)
 	{
-		pCharacter->SetAttacking(true);
-		FVector vAimPos = pCharacter->GetAimPosVector() + GetAimrateRecoilPosition();
-		vDir = (vAimPos - vfireStart).GetSafeNormal();
-	}
-		
-	
-	FVector vfireEnd = vfireStart + (vDir * FEquipData.fBaseRange);
-	
-	const UWorld* currentWorld = GetWorld();
-	FHitResult hitResult;
-
-	//UE_LOG(LogTemp, Log, TEXT("AttTrace"));
-	//DrawDebugLine(currentWorld, vfireStart, vfireEnd, FColor::Red, false, 0.3f);
-	if (currentWorld->LineTraceSingleByChannel(hitResult, vfireStart, vfireEnd, ECC_Visibility, collisionParams))
-	{
-		if (hitResult.GetActor())
+		if (pCharacter.IsValid())
 		{
-			auto hitActor = hitResult.GetActor();
-			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
+			pCharacter->SetAttacking(true);
+			FVector vAimPos = pCharacter->GetAimPosVector() + GetAimrateRecoilPosition();
+			vDir = (vAimPos - vfireStart).GetSafeNormal();
 		}
-		SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
+
+
+		FVector vfireEnd = vfireStart + (vDir * FEquipData.fBaseRange);
+
+		const UWorld* currentWorld = GetWorld();
+		FHitResult hitResult;
+
+		//UE_LOG(LogTemp, Log, TEXT("AttTrace"));
+		//DrawDebugLine(currentWorld, vfireStart, vfireEnd, FColor::Red, false, 0.3f);
+		if (currentWorld->LineTraceSingleByChannel(hitResult, vfireStart, vfireEnd, ECC_Visibility, collisionParams))
+		{
+			if (hitResult.GetActor())
+			{
+				auto hitActor = hitResult.GetActor();
+				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
+			}
+			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
+		}
+
+		
 	}
 
 	FRotator rotBullet = pMesh->GetSocketRotation(TEXT("ShellEject"));
 	FVector vBulletOut = pMesh->GetSocketLocation(TEXT("ShellEject"));
-	GetWorld()->SpawnActor<ABullet>(vBulletOut, rotBullet);
+	auto pBullet = GetWorld()->SpawnActor<ABullet>(vBulletOut, rotBullet);
+	if (FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN && IsValid(pBullet))
+		pBullet->ShotShell(true);
 
-
-	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
-	
-	RecoilTimeline.PlayFromStart();
 	if (pNiagaraCom)
 	{
 		pNiagaraCom->SetWorldRotation(vDir.Rotation());
 		pNiagaraCom->Activate(true);
 	}
+
+	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
 	
+	RecoilTimeline.PlayFromStart();
+	
+	if (pShotAnim)
+	{
+		pMesh->PlayAnimation(pShotAnim, false);
+	}
+		
 	
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (nullptr != pGameInstance) pGameInstance->StartSoundLocation(TEXT("9mmShot"), GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
+	FString strSoundName = FString::Printf(TEXT("%s_Shot"), *FEquipData.Name);
+	if (nullptr != pGameInstance) pGameInstance->StartSoundLocationRandomPitch(*strSoundName, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
 }
 
 void AWeapon::Reload()
@@ -278,7 +300,8 @@ void AWeapon::Reload()
 	--iCurrentMagazine;
 
 	iCurrentCapacity = FEquipData.iBaseCapacity;
-	InitMagazineMesh(TEXT("/Script/Engine.StaticMesh'/Game/Props/Meshes/ETC/M9-Magazine.M9-Magazine'"));
+	
+	InitMagazineMesh();
 
 }
 
@@ -328,6 +351,12 @@ void AWeapon::AttackStop()
 	{
 		GetWorldTimerManager().ClearTimer(Firetimehandle);
 	}
+}
+
+void AWeapon::SetHide(bool hide)
+{
+	SetActorHiddenInGame(hide);
+	pMagazine->SetActorHiddenInGame(hide);
 }
 
 FVector AWeapon::GetAimrateRecoilPosition()

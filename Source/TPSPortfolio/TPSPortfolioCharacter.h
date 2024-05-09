@@ -82,6 +82,14 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* ReloadAction;
 
+	/** Weapon1 Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Weapon1Action;
+
+	/** Weapon2 Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Weapon2Action;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
 
@@ -94,6 +102,8 @@ private:
 	void InitializeInputContext();
 	void InitializeMeshComponent();
 	void InitializeDefaultComponent();
+
+	void IAFactory(FString address, UInputAction** uiaction);
 protected:
 	void Move(const FInputActionValue& Value);
 	void MoveComplete();
@@ -106,18 +116,20 @@ protected:
 	void Attack();
 	void AttackComplete();
 	void Reload();
+	void WeaponChangePrimary();
+	void WeaponChangeSecondary();
 	
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
 	void CameraControl(float DeltaSeconds);
 	void CaculateTotalWalkSpeed(float DeltaSeconds);
-	void SetAimRate(eCharacterState eChangeState);
+	void SetAimRate(ECharacterState eChangeState);
 
 	void Timer(float DeltaSeconds);
 	void SlideGround(float DeltaSeconds);
 
 	void UpdateState(float DeltaSeconds);
-	void ChangeState(eCharacterState eChangeState);
+	void ChangeState(ECharacterState eChangeState);
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -167,8 +179,10 @@ public:
 	void ReloadComplete();
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
-	eCharacterState GetCharacterState();
+	ECharacterState GetCharacterState();
 
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	EWeaponType GetWeaponType();
 public:
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
@@ -183,6 +197,7 @@ public:
 	float GetWalkSpeed();
 	bool GetIsMoving() { return bIsMoving; }
 	bool GetIsSprint() {return bIsSprint;}
+	bool GetIsEquiping() { return bIsEquiping; }
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
@@ -195,12 +210,20 @@ public:
 	void SetFowardValue(float FowardValue) { fFowardValue = FowardValue; }
 	void SetIsAimTurn(bool IsAimTurn) { bIsAimTurn = IsAimTurn; }
 	void SetBraking(float fTime);
+	void SetEquiping(bool Equiping) { bIsEquiping = Equiping; }
+	void NotifyEquip();
+	void SetPrimaryEquip();
+	void SetSecondaryEquip();
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
 
 	UPROPERTY()
+	TArray<AWeapon*> WeaponSlot;
+
+	UPROPERTY()
 	AWeapon* pCurWeapon;
+
 	FVector vControlVectorX;
 	FVector vControlVectorY;
 	FVector vChangeDirection;
@@ -217,12 +240,15 @@ private:
 	float fSprintSpeed;
 	float fBrakeTimer;
 
+	int32 iWeaponIndex;
+
 	bool bIsRun;
 	bool bIsSprint;
 	bool bIsMoving;
 	bool bIsBraking;
 	bool bIsAiming;
 	bool bIsAimTurn;
+	bool bIsEquiping;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;

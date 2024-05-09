@@ -7,7 +7,7 @@
 BrakeCharacterState::BrakeCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
-	eState = eCharacterState::BRAKE;
+	eState = ECharacterState::BRAKE;
 }
 
 BrakeCharacterState::~BrakeCharacterState()

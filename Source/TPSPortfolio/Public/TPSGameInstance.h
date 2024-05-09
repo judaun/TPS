@@ -34,6 +34,7 @@ public:
 
 	void StartSound(FString soundname, float volume = 1.f, bool isloop = false);
 	void StartSoundLocation(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
+	void StartSoundLocationRandomPitch(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
 
 private:
 	UPROPERTY()

@@ -7,7 +7,7 @@
 AimCharacterState::AimCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
-	eState = eCharacterState::AIM;
+	eState = ECharacterState::AIM;
 	fTimer = 0.f;
 	bIsTimeOut = false;
 }

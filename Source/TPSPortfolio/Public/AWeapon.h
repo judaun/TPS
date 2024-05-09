@@ -28,7 +28,7 @@ public:
 private:
 	void InitializeMesh(FString weaponaddress);
 	FString GetWeaponTypeName(EWeaponType weapontype);
-	void InitMagazineMesh(FString magazineaddress);
+	void InitMagazineMesh();
 	void InitTimeLine();
 protected:
 	// Called when the game starts or when spawned
@@ -45,9 +45,12 @@ public:
 	void AttackStart();
 	void AttackStop();
 	void SetAimRate(float aimrate) { fAimRate = aimrate; }
+	void SetHide(bool hide);
 	int32 GetCurrentBullet() { return iCurrentCapacity; }
 	int32 GetMaxBullet() { return FEquipData.iBaseCapacity; }
 	int32 GetMagazine() { return iCurrentMagazine; }
+
+	EWeaponType GetWeaponType() { return FEquipData.WeaponType; }
 
 	FVector GetAimrateRecoilPosition();
 	bool IsFullCapacity();
@@ -103,4 +106,7 @@ private:
 	float CurrentRecoilRecoveryTime;
 
 	float fFireMenual;
+
+	UPROPERTY()
+	UAnimSequence* pShotAnim;
 };

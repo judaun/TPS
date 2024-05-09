@@ -7,7 +7,7 @@
 IdleCharacterState::IdleCharacterState(ATPSPortfolioCharacter* TpsCharacter)
 {
 	pCharacter = TpsCharacter;
-	eState = eCharacterState::IDLE;
+	eState = ECharacterState::IDLE;
 }
 
 IdleCharacterState::~IdleCharacterState()

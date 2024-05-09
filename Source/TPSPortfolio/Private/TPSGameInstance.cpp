@@ -75,3 +75,11 @@ void UTPSGameInstance::StartSoundLocation(FString soundname, const UObject* worl
 	pSoundMng->StartSoundLocation(*soundname, world, location, atttype, volume, isloop);
 
 }
+
+void UTPSGameInstance::StartSoundLocationRandomPitch(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume /*= 1.f*/, bool isloop /*= false*/)
+{
+	if (nullptr == pSoundMng) return;
+
+	pSoundMng->StartSoundLocationRandomPitch(*soundname, world, location, atttype, volume, isloop);
+
+}

@@ -19,6 +19,7 @@
 #include "CrossHair.h"
 #include "CharacterHUD.h"
 #include "AWeapon.h"
+#include "TPSAnimInstance.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -38,9 +39,11 @@ ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
 	func_Player_Bullet.Clear();
 	func_Player_Aimrate.Clear();
 	func_Player_Magazine.Unbind();
+	WeaponSlot.Reset();
+
 	if (pCurWeapon != nullptr && IsValid(pCurWeapon))
 	{
-		pCurWeapon->Destroy();
+		pCurWeapon->Reset();
 	}
 }
 
@@ -70,12 +73,14 @@ void ATPSPortfolioCharacter::initialize()
 	fRunSpeed = 450.f;
 	fSprintSpeed = 800.f;
 	fBrakeTimer = 0.f;
+	iWeaponIndex = 0;
 	bIsRun = true;
 	bIsSprint = false;
 	bIsMoving = false;
 	bIsBraking = false;
 	bIsAiming = false;
 	bIsAimTurn = false;
+	bIsEquiping = false;
 
 	//auto stState = new IdleState();
 	//auto stState = new IdleCharacterState(this);
@@ -96,45 +101,17 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 		UE_LOG(LogTemp, Log, TEXT("InputTest"));
 		DefaultMappingContext = FObj_InputContext.Object;
 	}
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Jump
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Jump.IA_Jump"));
-	if (IA_Jump.Succeeded())
-		JumpAction = IA_Jump.Object;
 
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Aim
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Aim.IA_Aim"));
-	if (IA_Aim.Succeeded())
-		AimAction = IA_Aim.Object;
-
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Look
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Look.IA_Look"));
-	if (IA_Look.Succeeded())
-		LookAction = IA_Look.Object;
-
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Move
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Move.IA_Move"));
-	if (IA_Move.Succeeded())
-		MoveAction = IA_Move.Object;
-
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Run
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Run.IA_Run"));
-	if (IA_Run.Succeeded())
-		RunAction = IA_Run.Object;
-
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Sprint
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Sprint.IA_Sprint"));
-	if (IA_Sprint.Succeeded())
-		SprintAction = IA_Sprint.Object;
-
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Attack
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Attack.IA_Attack"));
-	if (IA_Attack.Succeeded())
-		AttackAction = IA_Attack.Object;
-
-	static ConstructorHelpers::FObjectFinder<UInputAction>IA_Reload
-	(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload.IA_Reload"));
-	if (IA_Reload.Succeeded())
-		ReloadAction = IA_Reload.Object;
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Jump.IA_Jump"), &JumpAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Aim.IA_Aim"), &AimAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Look.IA_Look"), &LookAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Move.IA_Move"), &MoveAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Run.IA_Run"), &RunAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Sprint.IA_Sprint"), &SprintAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Attack.IA_Attack"), &AttackAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload.IA_Reload"), &ReloadAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Primary.IA_Primary"), &Weapon1Action);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Secondary.IA_Secondary"), &Weapon2Action);
 }
 
 void ATPSPortfolioCharacter::InitializeMeshComponent()
@@ -183,6 +160,14 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	pInventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
 }
 
+void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
+{
+	ConstructorHelpers::FObjectFinder<UInputAction>IA_Action
+	(*address);
+	if (IA_Action.Succeeded())
+		*uiaction = IA_Action.Object;
+}
+
 void ATPSPortfolioCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -199,7 +184,19 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 
 	FName WeaponSocket(TEXT("r_hand_socket"));
-	pCurWeapon = pInventory->LoadWeapon(0);
+	WeaponSlot.Emplace(pInventory->LoadWeapon(0));
+	//WeaponSlot.Emplace(pInventory->LoadWeapon(1));
+	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
+	
+	for (auto elem : WeaponSlot)
+	{
+		elem->SetPlayer(this);
+		elem->SetHide(true);
+	}
+		
+
+	pCurWeapon = WeaponSlot[0];
+	pCurWeapon->SetHide(false);
 	pCurWeapon->SetPlayer(this);
 	//pCurWeapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
 
@@ -241,11 +238,18 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 	UpdateState(DeltaSeconds);
 }
 
-eCharacterState ATPSPortfolioCharacter::GetCharacterState()
+ECharacterState ATPSPortfolioCharacter::GetCharacterState()
 {
-	if (stCharacterState == nullptr) return eCharacterState::IDLE;
+	if (stCharacterState == nullptr) return ECharacterState::IDLE;
 
 	return stCharacterState->eState;
+}
+
+EWeaponType ATPSPortfolioCharacter::GetWeaponType()
+{
+	if (!IsValid(pCurWeapon)) return EWeaponType::WEAPON_NONE;
+
+	return pCurWeapon->GetWeaponType();
 }
 
 FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
@@ -324,6 +328,9 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Reload);
 		//EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AttackComplete);
 
+		EnhancedInputComponent->BindAction(Weapon1Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangePrimary);
+		EnhancedInputComponent->BindAction(Weapon2Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangeSecondary);
+
 	}
 
 }
@@ -350,7 +357,7 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 		//움직임에 따른 회전 방향값 지정
 		SetMoveDirection(ForwardDirection, RightDirection, MovementVector);
 		SetIsMoving(true);
-		ChangeState(bIsSprint ? eCharacterState::SPRINT : eCharacterState::RUN);
+		ChangeState(bIsSprint ? ECharacterState::SPRINT : ECharacterState::RUN);
 	}
 }
 
@@ -358,7 +365,7 @@ void ATPSPortfolioCharacter::MoveComplete()
 {
 	SetIsMoving(false);
 	if(!bIsBraking)
-	ChangeState(eCharacterState::IDLE);
+	ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
@@ -383,12 +390,12 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 
 void ATPSPortfolioCharacter::Aim()
 {
-	ChangeState(eCharacterState::AIM);
+	ChangeState(ECharacterState::AIM);
 }
 
 void ATPSPortfolioCharacter::AimComplete()
 {
-	ChangeState(eCharacterState::IDLE);
+	ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Attack()
@@ -414,19 +421,38 @@ void ATPSPortfolioCharacter::Reload()
 	if (!pCurWeapon->IsPosibleReload()) return;
 
 	bIsReloading = true;
+
 	pCurWeapon->ReloadStart();
 	if (func_Player_Bullet.IsBound())
 		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 }
 
+void ATPSPortfolioCharacter::WeaponChangePrimary()
+{
+	if (bIsEquiping) return;
+
+	iWeaponIndex = 1;
+	bIsEquiping = true;
+}
+
 void ATPSPortfolioCharacter::ReloadComplete()
 {
+	if (!bIsReloading) return;
 	bIsReloading = false;
 	if (nullptr == pCurWeapon) return;
 	pCurWeapon->Reload();
+
 	if (func_Player_Bullet.IsBound())
 		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 	func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+}
+
+void ATPSPortfolioCharacter::WeaponChangeSecondary()
+{
+	if (bIsEquiping) return;
+
+	iWeaponIndex = 2;
+	bIsEquiping = true;
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
@@ -553,20 +579,20 @@ void ATPSPortfolioCharacter::CaculateTotalWalkSpeed(float DeltaSeconds)
 	//UE_LOG(LogTemp, Log, TEXT("MaxSpeed : %f, LerpSpeed : %f"), GetCharacterMovement()->MaxWalkSpeed, fLerpSpeed);
 }
 
-void ATPSPortfolioCharacter::SetAimRate(eCharacterState eChangeState)
+void ATPSPortfolioCharacter::SetAimRate(ECharacterState eChangeState)
 {
 	float fAimrate = 0.f;
 	switch (eChangeState)
 	{
-	case eCharacterState::IDLE :
-	case eCharacterState::BRAKE: fAimrate = 1.f;
+	case ECharacterState::IDLE :
+	case ECharacterState::BRAKE: fAimrate = 1.f;
 		break;
-	case eCharacterState::RUN: fAimrate = bIsAiming ? 0.5f : 2.f;
+	case ECharacterState::RUN: fAimrate = bIsAiming ? 0.5f : 2.f;
 		break;
-	case eCharacterState::SPRINT: fAimrate = bIsAiming ? 1.f : 3.f;
+	case ECharacterState::SPRINT: fAimrate = bIsAiming ? 1.f : 3.f;
 		break;
 
-	case eCharacterState::AIM: fAimrate = 0.f;
+	case ECharacterState::AIM: fAimrate = 0.f;
 		break;
 	}
 	if(func_Player_Aimrate.IsBound())
@@ -575,8 +601,107 @@ void ATPSPortfolioCharacter::SetAimRate(eCharacterState eChangeState)
 
 void ATPSPortfolioCharacter::SetBraking(float fTime)
 {
-	ChangeState(eCharacterState::BRAKE);
+	ChangeState(ECharacterState::BRAKE);
 	fBrakeTimer = fTime;
+}
+
+void ATPSPortfolioCharacter::NotifyEquip()
+{
+	switch (iWeaponIndex)
+	{
+	case 1: SetPrimaryEquip(); 
+		break;
+	case 2: SetSecondaryEquip();
+		break;
+	}
+}
+
+void ATPSPortfolioCharacter::SetPrimaryEquip()
+{
+	if (WeaponSlot.Num() < 1) return;
+
+	if (IsValid(pCurWeapon))
+	{
+		pCurWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		pCurWeapon->SetHide(true);
+
+		bool bIsSame = pCurWeapon == WeaponSlot[0];
+
+		pCurWeapon = nullptr;
+		
+		if(bIsSame) return;
+	}
+
+	
+
+	pCurWeapon = WeaponSlot[0];
+
+	FName WeaponSocket;
+	switch (pCurWeapon->GetWeaponType())
+	{
+	case EWeaponType::WEAPON_HANDGUN : WeaponSocket = TEXT("r_hand_socket");
+		break;
+	case EWeaponType::WEAPON_RIFLE: 
+	case EWeaponType::WEAPON_SHOTGUN: WeaponSocket = TEXT("r_hand_rifle");
+		break;
+	}
+	
+	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
+	{
+		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+		pCurWeapon->SetHide(false);
+	}
+
+	if (IsValid(pCurWeapon))
+	{
+		if (func_Player_Bullet.IsBound())
+			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+	}
+}
+
+void ATPSPortfolioCharacter::SetSecondaryEquip()
+{
+	if (WeaponSlot.Num() < 2) return;
+
+	if (IsValid(pCurWeapon))
+	{
+		pCurWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		pCurWeapon->SetHide(true);
+		
+		bool bIsSame = pCurWeapon == WeaponSlot[1];
+		
+		pCurWeapon = nullptr;
+
+		if(bIsSame) return;
+	}
+
+	
+
+	pCurWeapon = WeaponSlot[1];
+
+	FName WeaponSocket;
+	switch (pCurWeapon->GetWeaponType())
+	{
+	case EWeaponType::WEAPON_HANDGUN: WeaponSocket = TEXT("r_hand_socket");
+		break;
+	case EWeaponType::WEAPON_RIFLE:
+	case EWeaponType::WEAPON_SHOTGUN: WeaponSocket = TEXT("r_hand_rifle");
+		break;
+	}
+
+	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
+	{
+		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+		pCurWeapon->SetHide(false);
+	}
+
+	if (IsValid(pCurWeapon))
+	{
+		if (func_Player_Bullet.IsBound())
+			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+	}
 }
 
 void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
@@ -585,7 +710,7 @@ void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
 	if (fBrakeTimer > 0.f) fBrakeTimer -= DeltaSeconds;
 	else if (bIsBraking)
 	{
-		ChangeState(eCharacterState::IDLE);
+		ChangeState(ECharacterState::IDLE);
 	}
 }
 
@@ -601,13 +726,13 @@ void ATPSPortfolioCharacter::UpdateState(float DeltaSeconds)
 	stCharacterState->Update(DeltaSeconds);
 }
 
-void ATPSPortfolioCharacter::ChangeState(eCharacterState eChangeState)
+void ATPSPortfolioCharacter::ChangeState(ECharacterState eChangeState)
 {
 	if (stCharacterState == nullptr || stCharacterState->eState == eChangeState) return;
 
 	SetAimRate(eChangeState);
 
-	if ((bIsBraking || bIsAiming) && eChangeState != eCharacterState::IDLE)
+	if ((bIsBraking || bIsAiming) && eChangeState != ECharacterState::IDLE)
 		return;
 
 	for (int i = 0; i < vecState.size(); ++i)
@@ -620,5 +745,6 @@ void ATPSPortfolioCharacter::ChangeState(eCharacterState eChangeState)
 		stCharacterState->Enter();
 		break;
 	}
+
 }
 
