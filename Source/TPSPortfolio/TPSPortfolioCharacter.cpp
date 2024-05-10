@@ -73,6 +73,7 @@ void ATPSPortfolioCharacter::initialize()
 	fRunSpeed = 450.f;
 	fSprintSpeed = 800.f;
 	fBrakeTimer = 0.f;
+	fFrontAcos = 1.f;
 	iWeaponIndex = 0;
 	bIsRun = true;
 	bIsSprint = false;
@@ -323,7 +324,8 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		//Attacking
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Attack);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AttackComplete);
-
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::AttackStart);
+		
 		//Reloading
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Reload);
 		//EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::AttackComplete);
@@ -401,10 +403,24 @@ void ATPSPortfolioCharacter::AimComplete()
 void ATPSPortfolioCharacter::Attack()
 {
 	if (nullptr == pCurWeapon) return;
+	if (bIsEquiping) return;
 
 	pCurWeapon->AttackStart();
 	if (func_Player_Bullet.IsBound())
 		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+}
+
+void ATPSPortfolioCharacter::AttackStart()
+{
+	if (nullptr == pCurWeapon) return;
+	if (bIsEquiping) return;
+
+	pCurWeapon->AttackStart();
+	if (func_Player_Bullet.IsBound())
+		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+
+	if (bIsAiming && pCurWeapon->GetCurrentBullet() <= 0)
+		Reload();
 }
 
 void ATPSPortfolioCharacter::AttackComplete()

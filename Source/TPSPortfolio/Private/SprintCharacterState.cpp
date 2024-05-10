@@ -26,7 +26,7 @@ void SprintCharacterState::Update(float DeltaSeconds)
 void SprintCharacterState::Move()
 {
 	if (pCharacter == nullptr) return;
-
+	pCharacter->SetFrontAcos(1.f);
 	float fSpeed = pCharacter->GetWalkSpeed();
 	pCharacter->AddMovementInput(fSpeed > SPRINT_CONDITION ? pCharacter->GetActorForwardVector() : pCharacter->GetChangeVector());
 }

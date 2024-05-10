@@ -114,6 +114,7 @@ protected:
 	void Aim();
 	void AimComplete();
 	void Attack();
+	void AttackStart();
 	void AttackComplete();
 	void Reload();
 	void WeaponChangePrimary();
@@ -179,6 +180,9 @@ public:
 	void ReloadComplete();
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	float GetFrontAcos() { return fFrontAcos; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	ECharacterState GetCharacterState();
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
@@ -214,6 +218,8 @@ public:
 	void NotifyEquip();
 	void SetPrimaryEquip();
 	void SetSecondaryEquip();
+	void SetFrontAcos(float acos) { fFrontAcos = acos; }
+
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
@@ -239,6 +245,7 @@ private:
 	float fRunSpeed;
 	float fSprintSpeed;
 	float fBrakeTimer;
+	float fFrontAcos;
 
 	int32 iWeaponIndex;
 

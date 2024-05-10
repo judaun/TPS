@@ -49,10 +49,10 @@ enum class ESoundAttenuationType : uint8
 };
 
 UENUM(BlueprintType)
-enum class ECharacterState : uint8 { IDLE, RUN, SPRINT, BRAKE, AIM };
+enum class ECharacterState : uint8 { IDLE, RUN, SPRINT, BRAKE, AIM, EVADE };
 
 UENUM(BlueprintType)
 enum class EWeaponMontageState : uint8 
 { 
-	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, 
+	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, MELEE,
 };

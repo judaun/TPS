@@ -280,7 +280,9 @@ void AWeapon::AttackTrace()
 		pNiagaraCom->Activate(true);
 	}
 
-	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, 0.3f);
+	float fShakeScale = FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN ? 1.f : FEquipData.WeaponType == EWeaponType::WEAPON_RIFLE ? 0.15f:0.3f;
+
+	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, fShakeScale);
 	
 	RecoilTimeline.PlayFromStart();
 	
@@ -329,7 +331,7 @@ void AWeapon::AttackStart()
 
 	if (!pCharacter->GetisAiming())
 	{
-		//melee
+		pCharacter->SetAttacking(true);
 		return;
 	}
 

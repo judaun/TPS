@@ -39,13 +39,15 @@ private:
 	void PlayEquip(EWeaponType weapontype);
 	void PlayAim(EWeaponType weapontype);
 	void PlayRun(EWeaponType weapontype);
+	void PlaySprint(EWeaponType weapontype);
 	void PlayIdle(EWeaponType weapontype);
-
+	void PlayMelee(EWeaponType weapontype);
 
 
 	void BlendOutReload(class UAnimMontage*, bool interrupt);
 	void BlendOutShot(class UAnimMontage*, bool interrupt);
 	void BlendOutEquip(class UAnimMontage*, bool interrupt);
+	void BlendOutMelee(class UAnimMontage*, bool interrupt);
 
 	UFUNCTION()
 	void AnimNotify_WeaponSet();

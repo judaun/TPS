@@ -88,9 +88,17 @@ void AimCharacterState::LocoMotionDirection()
 	//범위제한 1~359
 	fChangingDegree = clamp(fChangingDegree, 1.f, 359.f);
 	
-	if (vControlDirection.Cross(vChangeControlDirection).Z < 0)
-		fChangingDegree *= -1.f;
+	float fFrontAcos = 1.f;
 
+	if (vControlDirection.Cross(vChangeControlDirection).Z < 0)
+	{
+		fChangingDegree *= -1.f;	
+	}
+
+	if (vControlYDirection.Cross(vChangeControlDirection).Z > 0) fFrontAcos *= -1.f;
+
+		
+	pCharacter->SetFrontAcos(fFrontAcos);
 	pCharacter->SetYCrossAngle(fChangingDegree);
 	pCharacter->SetCrossAngle(vControlDirection.Cross(vChangeControlDirection).Z);
 }
