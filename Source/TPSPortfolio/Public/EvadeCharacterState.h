@@ -17,7 +17,9 @@ public:
 public:
 	void Update(float DeltaSeconds) override;
 	void Move() override;
+	void Turn(float DeltaSeconds) override;
 	void CalculateSpeed(float DeltaSeconds) override;
 	void Enter() override;
 	void Exit() override;
+	void SetImpulse();
 };

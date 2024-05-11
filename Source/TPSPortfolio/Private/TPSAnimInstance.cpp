@@ -48,9 +48,15 @@ void UTPSAnimInstance::PlayAnimMontage()
 		PlayReload(WeaponType);
 		return;
 	}
+
+	if (pCharacter->GetIsCrawl())
+	{
+		Montage_Stop(0.1f);
+		return;
+	}
+
 	if (pCharacter->GetisAttacking())
 	{
-		CharacterState == ECharacterState::AIM ? PlayShot(WeaponType): PlayMelee(WeaponType);
 		return;
 	}
 
@@ -66,19 +72,25 @@ void UTPSAnimInstance::PlayAnimMontage()
 		PlaySprint(WeaponType);
 		break;
 	case ECharacterState::AIM:
-		pCharacter->GetisAttacking() ? PlayShot(WeaponType) : PlayAim(WeaponType);
+		PlayAim(WeaponType);
 		break;
 	case ECharacterState::BRAKE:
-	default: Montage_Stop(0.5f);
+	case ECharacterState::EVADE:
+	default: Montage_Stop(0.3f);
 		break;
 	}
+}
+
+void UTPSAnimInstance::PlayAttack(EWeaponType weapontype, bool ismelee)
+{
+	ismelee ? PlayMelee(weapontype) : PlayShot(weapontype);
 }
 
 void UTPSAnimInstance::InitMontage()
 {
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_2H_Idle.TPS_Pistol_2H_Idle'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::IDLE);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_2H_Aim.TPS_Pistol_2H_Aim'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::AIM);
-	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_2H_Recoil.TPS_Pistol_2H_Recoil'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::SHOT);
+	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Pistol_Fire.TPS_Pistol_Fire'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::SHOT);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_2H_Reload.TPS_Pistol_2H_Reload'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::RELOAD);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Run_Pistol.TPS_Run_Pistol'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::RUN);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_Equip.TPS_Pistol_Equip'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::EQUIP);
@@ -166,7 +178,7 @@ void UTPSAnimInstance::PlayShot(EWeaponType weapontype)
 	auto pMontage = GetMontage(weapontype, EWeaponMontageState::SHOT);
 	//if (!Montage_IsPlaying(pMontage))
 	{
-		Montage_Play(pMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, true);
+		Montage_Play(pMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, false);
 
 		FOnMontageBlendingOutStarted BlendOutDele;
 		BlendOutDele.BindUObject(this, &UTPSAnimInstance::BlendOutShot);
@@ -253,7 +265,7 @@ void UTPSAnimInstance::BlendOutEquip(class UAnimMontage*, bool interrupt)
 {
 	if(nullptr == pCharacter) return;
 	pCharacter->SetEquiping(false);
-
+	Montage_Stop(0.5f);
 }
 
 void UTPSAnimInstance::BlendOutMelee(class UAnimMontage*, bool interrupt)
@@ -267,4 +279,23 @@ void UTPSAnimInstance::AnimNotify_WeaponSet()
 {
 	if (nullptr == pCharacter) return;
 	pCharacter->NotifyEquip();
+}
+
+void UTPSAnimInstance::AnimNotify_JumpAway()
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->SetJumpAway();
+}
+
+void UTPSAnimInstance::AnimNotify_Landing()
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->EvadeComplete();
+}
+
+void UTPSAnimInstance::AnimNotify_CrawlEnd()
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->SetCrawlEnd();
+	UE_LOG(LogTemp, Log, TEXT("EndCrawl"));
 }

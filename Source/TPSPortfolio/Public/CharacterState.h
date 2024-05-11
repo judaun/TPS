@@ -24,7 +24,9 @@ public:
 	virtual void Turn(float DeltaSeconds) {}
 	virtual void Enter() {}
 	virtual void Exit() {}
+	virtual FVector LastDirection() {return vLastDirection;}
 public:
 	ATPSPortfolioCharacter* pCharacter;
 	ECharacterState eState;
+	FVector vLastDirection;
 };

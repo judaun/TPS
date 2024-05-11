@@ -21,12 +21,14 @@ void AimCharacterState::Update(float DeltaSeconds)
 	CalculateSpeed(DeltaSeconds);
 	TimerTurn(DeltaSeconds);
 	Turn(DeltaSeconds);
+	CrawlAim();
 	Move();
 }
 
 void AimCharacterState::Move()
 {
 	if (pCharacter == nullptr) return;
+	if (pCharacter->GetIsCrawl()) return;
 
 	if (pCharacter->GetIsMoving())
 		pCharacter->AddMovementInput(pCharacter->GetChangeVector());
@@ -43,6 +45,7 @@ void AimCharacterState::CalculateSpeed(float DeltaSeconds)
 void AimCharacterState::Turn(float DeltaSeconds)
 {
 	if (pCharacter == nullptr) return;
+	if (pCharacter->GetIsCrawl()) return;
 
 	const FVector vActorForwardDirection = pCharacter->GetActorForwardVector();
 	
@@ -64,6 +67,7 @@ void AimCharacterState::Turn(float DeltaSeconds)
 		pCharacter->SetIsAimTurn(false);
 
 	bool bIsMoving = pCharacter->GetIsMoving();
+	
 	if (bIsMoving || pCharacter->GetisAimTurn()) {
 		//외적으로 회전방향 구하기
 		
@@ -133,4 +137,18 @@ void AimCharacterState::SetTimer(float TimerTime)
 {
 	fTimer = TimerTime;
 	bIsTimeOut = false;
+}
+
+void AimCharacterState::CrawlAim()
+{
+	if (nullptr == pCharacter) return;
+	if (!pCharacter->GetIsCrawl()) return;
+
+	const FVector vActorForwardDirection = pCharacter->GetActorForwardVector();
+	const FVector vControlDirection = pCharacter->GetControlVector();
+	float fChangingDegree = FMath::RadiansToDegrees(FMath::Acos(vActorForwardDirection.Dot(vControlDirection)));
+	if (vActorForwardDirection.Cross(vControlDirection).Z < 0.f)
+		fChangingDegree *= -1.f;
+
+	pCharacter->SetYCrossAngle(fChangingDegree);
 }

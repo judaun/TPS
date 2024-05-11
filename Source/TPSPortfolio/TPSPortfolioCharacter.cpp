@@ -16,6 +16,7 @@
 #include "BrakeCharacterState.h"
 #include "SprintCharacterState.h"
 #include "AimCharacterState.h"
+#include "EvadeCharacterState.h"
 #include "CrossHair.h"
 #include "CharacterHUD.h"
 #include "AWeapon.h"
@@ -82,6 +83,9 @@ void ATPSPortfolioCharacter::initialize()
 	bIsAiming = false;
 	bIsAimTurn = false;
 	bIsEquiping = false;
+	bIsEvade = false;
+	bIsCrawl = false;
+	bIsCrawltoIdle = false;
 
 	//auto stState = new IdleState();
 	//auto stState = new IdleCharacterState(this);
@@ -90,6 +94,7 @@ void ATPSPortfolioCharacter::initialize()
 	vecState.emplace_back(make_unique<BrakeCharacterState>(this));
 	vecState.emplace_back(make_unique<SprintCharacterState>(this));
 	vecState.emplace_back(make_unique<AimCharacterState>(this));
+	vecState.emplace_back(make_unique<EvadeCharacterState>(this));
 
 	stCharacterState = vecState[0].get();
 }
@@ -184,9 +189,9 @@ void ATPSPortfolioCharacter::BeginPlay()
 	}
 
 
-	FName WeaponSocket(TEXT("r_hand_socket"));
+	FName WeaponSocket(TEXT("r_hand_rifle"));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(0));
-	//WeaponSlot.Emplace(pInventory->LoadWeapon(1));
+	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
 	
 	for (auto elem : WeaponSlot)
@@ -300,9 +305,8 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		//Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Evade);
+	
 		//Run
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Run);
 
@@ -366,7 +370,9 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 void ATPSPortfolioCharacter::MoveComplete()
 {
 	SetIsMoving(false);
-	if(!bIsBraking)
+	if (nullptr == stCharacterState)return;
+	if (stCharacterState->eState == ECharacterState::RUN ||
+		stCharacterState->eState == ECharacterState::SPRINT)
 	ChangeState(ECharacterState::IDLE);
 }
 
@@ -392,18 +398,25 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 
 void ATPSPortfolioCharacter::Aim()
 {
+	if (bIsCrawltoIdle) {
+		if(nullptr != stCharacterState &&
+			stCharacterState->eState == ECharacterState::AIM)
+		ChangeState(ECharacterState::IDLE);
+		return;
+	}
 	ChangeState(ECharacterState::AIM);
 }
 
 void ATPSPortfolioCharacter::AimComplete()
 {
+	if(stCharacterState->eState != ECharacterState::EVADE)
 	ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Attack()
 {
 	if (nullptr == pCurWeapon) return;
-	if (bIsEquiping) return;
+	if (bIsEquiping || bIsEvade) return;
 
 	pCurWeapon->AttackStart();
 	if (func_Player_Bullet.IsBound())
@@ -441,6 +454,25 @@ void ATPSPortfolioCharacter::Reload()
 	pCurWeapon->ReloadStart();
 	if (func_Player_Bullet.IsBound())
 		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
+}
+
+void ATPSPortfolioCharacter::Evade()
+{
+	if (bIsCrawl)
+	{
+		if(!bIsCrawltoIdle)
+			bIsCrawltoIdle = true;
+		return;
+	}
+
+	ChangeState(ECharacterState::EVADE);
+}
+
+void ATPSPortfolioCharacter::EvadeComplete()
+{
+	if (nullptr == stCharacterState) return;
+	if(stCharacterState->eState == ECharacterState::EVADE)
+		ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::WeaponChangePrimary()
@@ -533,17 +565,17 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 		return;
 
 	float fCurFOV = FollowCamera->FieldOfView;
-	float fTargetFOV = bIsAiming ? 90.f : 100.f;
+	float fTargetFOV = bIsCrawl ? 100.f : bIsAiming ? 90.f : 100.f;
 	float fLerpFOV = FMath::FInterpTo(fCurFOV, fTargetFOV, DeltaSeconds, CAMERA_FOV_SPEED);
 	FollowCamera->SetFieldOfView(fLerpFOV);
 
 	float fCurLength = CameraBoom->TargetArmLength;
-	float fTargetLength = bIsAiming ? 200.f : 350.f;
+	float fTargetLength = bIsCrawl ? 300.f : bIsAiming ? 200.f : 350.f;
 	float fLerpLength = FMath::FInterpTo(fCurLength, fTargetLength, DeltaSeconds, CAMERA_FOV_SPEED);
 	CameraBoom->TargetArmLength = fLerpLength;
 
 	FVector vCurCamera = CameraBoom->SocketOffset;
-	FVector vTarget = bIsAiming ? FVector(0.f, 60.f, 80.f) : FVector(0.f, 45.f ,70.f);
+	FVector vTarget = bIsCrawl ? FVector(0.f, 45.f, 30.f) : bIsAiming ? FVector(0.f, 60.f, 80.f) : FVector(0.f, 45.f ,70.f);
 	FVector vLerp = FMath::VInterpTo(vCurCamera, vTarget, DeltaSeconds, CAMERA_FOV_SPEED);
 	
 	CameraBoom->SocketOffset = vLerp;
@@ -652,15 +684,7 @@ void ATPSPortfolioCharacter::SetPrimaryEquip()
 
 	pCurWeapon = WeaponSlot[0];
 
-	FName WeaponSocket;
-	switch (pCurWeapon->GetWeaponType())
-	{
-	case EWeaponType::WEAPON_HANDGUN : WeaponSocket = TEXT("r_hand_socket");
-		break;
-	case EWeaponType::WEAPON_RIFLE: 
-	case EWeaponType::WEAPON_SHOTGUN: WeaponSocket = TEXT("r_hand_rifle");
-		break;
-	}
+	FName WeaponSocket = TEXT("r_hand_rifle");
 	
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
 	{
@@ -696,15 +720,7 @@ void ATPSPortfolioCharacter::SetSecondaryEquip()
 
 	pCurWeapon = WeaponSlot[1];
 
-	FName WeaponSocket;
-	switch (pCurWeapon->GetWeaponType())
-	{
-	case EWeaponType::WEAPON_HANDGUN: WeaponSocket = TEXT("r_hand_socket");
-		break;
-	case EWeaponType::WEAPON_RIFLE:
-	case EWeaponType::WEAPON_SHOTGUN: WeaponSocket = TEXT("r_hand_rifle");
-		break;
-	}
+	FName WeaponSocket = TEXT("r_hand_rifle");
 
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
 	{
@@ -718,6 +734,14 @@ void ATPSPortfolioCharacter::SetSecondaryEquip()
 			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
 	}
+}
+
+void ATPSPortfolioCharacter::SetJumpAway()
+{
+	SetIsCrawl(true);
+	FVector vImpulse = stCharacterState->LastDirection();
+	vImpulse.Z += 0.4f;
+	GetCharacterMovement()->AddImpulse(vImpulse * 600.f, true);
 }
 
 void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
@@ -748,8 +772,7 @@ void ATPSPortfolioCharacter::ChangeState(ECharacterState eChangeState)
 
 	SetAimRate(eChangeState);
 
-	if ((bIsBraking || bIsAiming) && eChangeState != ECharacterState::IDLE)
-		return;
+	if (!CanChangeState(eChangeState)) return;
 
 	for (int i = 0; i < vecState.size(); ++i)
 	{
@@ -762,5 +785,49 @@ void ATPSPortfolioCharacter::ChangeState(ECharacterState eChangeState)
 		break;
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("ChangeState : %i"), eChangeState);
+}
+
+bool ATPSPortfolioCharacter::CanChangeState(ECharacterState changestate)
+{
+	if (stCharacterState == nullptr || stCharacterState->eState == changestate) return false;
+
+	switch (stCharacterState->eState)
+	{
+	case ECharacterState::BRAKE :
+	case ECharacterState::AIM :
+		if (changestate != ECharacterState::IDLE && changestate != ECharacterState::EVADE) return false;
+		break;
+
+	case ECharacterState::EVADE :
+		if (changestate != ECharacterState::IDLE && changestate != ECharacterState::AIM) return false;
+		if (changestate == ECharacterState::AIM && !bIsCrawl) return false;
+		break;
+	}
+		
+	return true;
+}
+
+void ATPSPortfolioCharacter::PlayAttack(bool ismelee)
+{
+	if (bIsCrawl) return;
+	
+	bIsAttacking = true;
+
+	auto pMesh = GetMesh();
+	if (!IsValid(pMesh)) return;
+	auto pAnimInst = pMesh->GetAnimInstance();
+	if (!IsValid(pAnimInst)) return;
+	
+	auto eType = pCurWeapon == nullptr ? EWeaponType::WEAPON_NONE : pCurWeapon->GetWeaponType();
+	auto tpsAnimInst = Cast<UTPSAnimInstance>(pAnimInst);
+	if(IsValid(tpsAnimInst))
+		tpsAnimInst->PlayAttack(eType, ismelee);
+}
+
+void ATPSPortfolioCharacter::SetCrawlEnd()
+{
+	bIsCrawl = false;
+	bIsCrawltoIdle = false;
 }
 

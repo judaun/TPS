@@ -117,6 +117,8 @@ protected:
 	void AttackStart();
 	void AttackComplete();
 	void Reload();
+	void Evade();
+	
 	void WeaponChangePrimary();
 	void WeaponChangeSecondary();
 	
@@ -131,6 +133,8 @@ protected:
 
 	void UpdateState(float DeltaSeconds);
 	void ChangeState(ECharacterState eChangeState);
+	bool CanChangeState(ECharacterState changestate);
+	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -187,6 +191,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	EWeaponType GetWeaponType();
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetIsCrawl() { return bIsCrawl; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetIsCrawltoIdle() { return bIsCrawltoIdle; }
+
 public:
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
@@ -219,7 +230,12 @@ public:
 	void SetPrimaryEquip();
 	void SetSecondaryEquip();
 	void SetFrontAcos(float acos) { fFrontAcos = acos; }
-
+	void SetJumpAway();
+	void SetIsEvade(bool evade) { bIsEvade = evade; }
+	void EvadeComplete();
+	void SetIsCrawl(bool crawl) { bIsCrawl = crawl; }
+	void PlayAttack(bool ismelee = false);
+	void SetCrawlEnd();
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
@@ -256,6 +272,9 @@ private:
 	bool bIsAiming;
 	bool bIsAimTurn;
 	bool bIsEquiping;
+	bool bIsEvade;
+	bool bIsCrawl;
+	bool bIsCrawltoIdle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;

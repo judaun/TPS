@@ -34,7 +34,8 @@ void RunCharacterState::CalculateSpeed(float DeltaSeconds)
 	if (pCharacter == nullptr) return;
 
 	pCharacter->SetBrakeSpeed(IDLE_DECLEASE);
-	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), pCharacter->GetDefaultRunSpeed(), DeltaSeconds, BRAKE_DECLEASE));
+	pCharacter->SetWalkSpeed(FMath::FInterpConstantTo(pCharacter->GetWalkSpeed(), 
+		pCharacter->GetIsCrawl() ? pCharacter->GetDefaultWalkSpeed() : pCharacter->GetDefaultRunSpeed(), DeltaSeconds, BRAKE_DECLEASE));
 }
 
 void RunCharacterState::Turn(float DeltaSeconds)

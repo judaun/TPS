@@ -25,6 +25,7 @@ public:
 	void Exit() override;
 	void TimerTurn(float DeltaSeconds);
 	void SetTimer(float TimerTime);
+	void CrawlAim();
 private:
 	float fTimer;
 	bool bIsTimeOut;

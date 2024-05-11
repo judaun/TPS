@@ -16,6 +16,9 @@ enum class EWeaponMontageState : uint8;
 class UAnimMontage;
 
 DECLARE_MULTICAST_DELEGATE(FOnWeaponSet);
+DECLARE_MULTICAST_DELEGATE(FOnJumpAway);
+DECLARE_MULTICAST_DELEGATE(FOnLanding);
+DECLARE_MULTICAST_DELEGATE(FOnCrawlEnd);
 
 UCLASS()
 class TPSPORTFOLIO_API UTPSAnimInstance : public UAnimInstance
@@ -27,7 +30,7 @@ public:
 	void NativeUpdateAnimation(float DeltaSeconds) override;
 public:
 	void PlayAnimMontage();
-
+	void PlayAttack(EWeaponType weapontype, bool ismelee);
 private:
 	void InitMontage();
 
@@ -43,7 +46,6 @@ private:
 	void PlayIdle(EWeaponType weapontype);
 	void PlayMelee(EWeaponType weapontype);
 
-
 	void BlendOutReload(class UAnimMontage*, bool interrupt);
 	void BlendOutShot(class UAnimMontage*, bool interrupt);
 	void BlendOutEquip(class UAnimMontage*, bool interrupt);
@@ -51,6 +53,12 @@ private:
 
 	UFUNCTION()
 	void AnimNotify_WeaponSet();
+	UFUNCTION()
+	void AnimNotify_JumpAway();
+	UFUNCTION()
+	void AnimNotify_Landing();
+	UFUNCTION()
+	void AnimNotify_CrawlEnd();
 
 private:
 	UPROPERTY()
@@ -64,4 +72,7 @@ private:
 	TMap<EWeaponMontageState, UAnimMontage*> map_AnimMontageShotgun;
 
 	FOnWeaponSet OnWeaponSet;
+	FOnJumpAway OnJumpAway;
+	FOnLanding OnLanding;
+	FOnCrawlEnd OnCrawlEnd;
 };

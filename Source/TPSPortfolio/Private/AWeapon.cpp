@@ -242,7 +242,7 @@ void AWeapon::AttackTrace()
 	{
 		if (pCharacter.IsValid())
 		{
-			pCharacter->SetAttacking(true);
+			pCharacter->PlayAttack();
 			FVector vAimPos = pCharacter->GetAimPosVector() + GetAimrateRecoilPosition();
 			vDir = (vAimPos - vfireStart).GetSafeNormal();
 		}
@@ -291,7 +291,6 @@ void AWeapon::AttackTrace()
 		pMesh->PlayAnimation(pShotAnim, false);
 	}
 		
-	
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	FString strSoundName = FString::Printf(TEXT("%s_Shot"), *FEquipData.Name);
 	if (nullptr != pGameInstance) pGameInstance->StartSoundLocationRandomPitch(*strSoundName, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
@@ -331,7 +330,7 @@ void AWeapon::AttackStart()
 
 	if (!pCharacter->GetisAiming())
 	{
-		pCharacter->SetAttacking(true);
+		pCharacter->PlayAttack(true);
 		return;
 	}
 
