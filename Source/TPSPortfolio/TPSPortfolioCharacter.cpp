@@ -21,6 +21,7 @@
 #include "CharacterHUD.h"
 #include "AWeapon.h"
 #include "TPSAnimInstance.h"
+#include "C_FootIK.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -164,6 +165,7 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	pInventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
+	FootIK = CreateDefaultSubobject<UC_FootIK>(TEXT("FootIK"));
 }
 
 void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
@@ -587,11 +589,14 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 		return;
 	}
 
-
+	//카메라 컴포넌트포지션
 	FVector vecWorldLocation = FollowCamera->GetComponentLocation();
+	//카메라 로테이션
 	FVector vecCameraLook = Controller->GetControlRotation().Vector();
+	//타겟=포지션+방향*최대거리
 	FVector vecTarget = vecWorldLocation + vecCameraLook * 3000.f;
 	FHitResult FHresult;
+	//콜리전파라미터에 자기자신 충돌무시
 	FCollisionQueryParams collisionParams;
 	collisionParams.AddIgnoredActor(this);
 	if (GetWorld()->LineTraceSingleByChannel(FHresult, vecWorldLocation, vecTarget, ECollisionChannel::ECC_OverlapAll_Deprecated, collisionParams))
