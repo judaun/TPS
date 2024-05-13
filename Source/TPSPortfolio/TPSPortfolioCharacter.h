@@ -240,6 +240,8 @@ public:
 	void SetIsCrawl(bool crawl) { bIsCrawl = crawl; }
 	void PlayAttack(bool ismelee = false);
 	void SetCrawlEnd();
+
+	FRotator GetFootRotator(bool left);
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;

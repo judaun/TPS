@@ -12,6 +12,8 @@
  * 
  */
 class ATPSSoundManager;
+class ATPSEffectMng;
+class UNiagaraSystem;
 
 UCLASS()
 class TPSPORTFOLIO_API UTPSGameInstance : public UGameInstance
@@ -32,9 +34,19 @@ public:
 	FEquipmentTable* GetEquipmentData(int32 key);
 	TArray<FEquipmentTable*> GetEquipmentData_ALL();
 
+	/* 사운드 일반 재생 */
 	void StartSound(FString soundname, float volume = 1.f, bool isloop = false);
+	/* 사운드 월드 위치로 재생 */
 	void StartSoundLocation(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
+	/* 사운드 월드 위치에서 랜덤피치(높낮이변화)로 재생 */
 	void StartSoundLocationRandomPitch(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
+
+	/* 로드된 나이아가라 시스템을 월드로 스폰 */
+	void SpawnEffect(FString keyname, const UObject* WorldContextObject, FVector Location, FRotator Rotation = FRotator::ZeroRotator, FVector Scale = FVector(1.f), bool bAutoDestroy = true);
+	/* 로드된 데칼마테리얼을 월드로 스폰 */
+	void SpawnDecal(FString keyname, TObjectPtr<UWorld> WorldContextObject, float lifetime, FVector Location, FRotator Rotation = FRotator::ZeroRotator, FVector Scale = FVector(1.f), float fadedistancesize = 0.01f);
+	/* 엑터에 Attach 하기 위한 나이아가라 시스템 포인터 반환 */
+	UNiagaraSystem* GetEffect(FString keyname);
 
 private:
 	UPROPERTY()
@@ -44,4 +56,7 @@ private:
 
 	UPROPERTY()
 	ATPSSoundManager* pSoundMng;
+
+	UPROPERTY()
+	ATPSEffectMng* pEffectMng;
 };

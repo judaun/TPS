@@ -19,6 +19,9 @@ DECLARE_MULTICAST_DELEGATE(FOnWeaponSet);
 DECLARE_MULTICAST_DELEGATE(FOnJumpAway);
 DECLARE_MULTICAST_DELEGATE(FOnLanding);
 DECLARE_MULTICAST_DELEGATE(FOnCrawlEnd);
+DECLARE_MULTICAST_DELEGATE(FOnFootstep_L);
+DECLARE_MULTICAST_DELEGATE(FOnFootstep_R);
+DECLARE_MULTICAST_DELEGATE(FOnSwosh);
 
 UCLASS()
 class TPSPORTFOLIO_API UTPSAnimInstance : public UAnimInstance
@@ -59,7 +62,12 @@ private:
 	void AnimNotify_Landing();
 	UFUNCTION()
 	void AnimNotify_CrawlEnd();
-
+	UFUNCTION()
+	void AnimNotify_Footstep_L();
+	UFUNCTION()
+	void AnimNotify_Footstep_R();
+	UFUNCTION()
+	void AnimNotify_Swosh();
 private:
 	UPROPERTY()
 	TWeakObjectPtr<ATPSPortfolioCharacter> pCharacter;
@@ -75,4 +83,7 @@ private:
 	FOnJumpAway OnJumpAway;
 	FOnLanding OnLanding;
 	FOnCrawlEnd OnCrawlEnd;
+	FOnFootstep_L OnFootstep_L;
+	FOnFootstep_R OnFootstep_R;
+	FOnSwosh OnSwosh;
 };

@@ -22,6 +22,7 @@
 #include "AWeapon.h"
 #include "TPSAnimInstance.h"
 #include "C_FootIK.h"
+#include "TPSGameInstance.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -747,6 +748,11 @@ void ATPSPortfolioCharacter::SetJumpAway()
 	FVector vImpulse = stCharacterState->LastDirection();
 	vImpulse.Z += 0.4f;
 	GetCharacterMovement()->AddImpulse(vImpulse * 600.f, true);
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		pGameInstance->StartSoundLocation(TEXT("ClothFlap"), GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_2D);
+	}
 }
 
 void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
@@ -834,5 +840,12 @@ void ATPSPortfolioCharacter::SetCrawlEnd()
 {
 	bIsCrawl = false;
 	bIsCrawltoIdle = false;
+}
+
+FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
+{
+	if (!IsValid(FootIK)) return FRotator::ZeroRotator;
+
+	return Cast<UC_FootIK>(FootIK)->GetFootIK(left);
 }
 

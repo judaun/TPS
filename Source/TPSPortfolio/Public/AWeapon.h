@@ -90,15 +90,7 @@ private:
 	UCurveVector* CameraRecoilCurve;
 
 	UPROPERTY(EditAnywhere, Category = "Firing")
-	UNiagaraSystem* FireEffectMuzzle;
-	UPROPERTY(EditAnywhere, Category = "Firing")
 	UNiagaraComponent* pNiagaraCom;
-
-	UPROPERTY(EditAnywhere, Category = "Hit")
-	UNiagaraSystem* HitEffect;
-
-	UPROPERTY()
-	UMaterial* pDecalMaterial;
 
 	UPROPERTY()
 	FTimeline RecoilTimeline;

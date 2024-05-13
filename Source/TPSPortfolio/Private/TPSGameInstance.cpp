@@ -3,12 +3,15 @@
 
 #include "TPSGameInstance.h"
 #include "TPSSoundManager.h"
+#include "TPSEffectMng.h"
+#include "NiagaraFunctionLibrary.h"
 #include "TPSEnum.h"
 
 UTPSGameInstance::UTPSGameInstance()
 {
 	Initialize_DataTable();
 	pSoundMng = CreateDefaultSubobject<ATPSSoundManager>(TEXT("SoundManager"));
+	pEffectMng = CreateDefaultSubobject<ATPSEffectMng>(TEXT("EffectManager"));
 	srand((uint32)time(NULL));
 }
 
@@ -82,4 +85,22 @@ void UTPSGameInstance::StartSoundLocationRandomPitch(FString soundname, const UO
 
 	pSoundMng->StartSoundLocationRandomPitch(*soundname, world, location, atttype, volume, isloop);
 
+}
+
+void UTPSGameInstance::SpawnEffect(FString keyname, const UObject* WorldContextObject, FVector Location, FRotator Rotation /*= FRotator::ZeroRotator*/, FVector Scale /*= FVector(1.f)*/, bool bAutoDestroy /*= true*/)
+{
+	if (nullptr == pEffectMng) return;
+	pEffectMng->SpawnEffect(keyname, WorldContextObject, Location, Rotation, Scale, bAutoDestroy);
+}
+
+void UTPSGameInstance::SpawnDecal(FString keyname, TObjectPtr<UWorld> WorldContextObject, float lifetime, FVector Location, FRotator Rotation /*= FRotator::ZeroRotator*/, FVector Scale /*= FVector(1.f)*/, float fadedistancesize /*= 0.01f*/)
+{
+	if (nullptr == pEffectMng) return;
+	pEffectMng->SpawnDecal(keyname, WorldContextObject, lifetime, Location, Rotation, Scale, fadedistancesize);
+}
+
+UNiagaraSystem* UTPSGameInstance::GetEffect(FString keyname)
+{
+	if (nullptr == pEffectMng) return nullptr;
+	return pEffectMng->GetEffect(keyname);
 }

@@ -64,8 +64,8 @@ void EvadeCharacterState::Exit()
 	pCharacter->SetIsEvade(false);
 }
 
-void EvadeCharacterState::SetImpulse()
+void EvadeCharacterState::DustEffect()
 {
-	if (pCharacter == nullptr) return;
-	pCharacter->AddActorWorldOffset(pCharacter->GetChangeVector());
+
 }
+

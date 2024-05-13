@@ -88,6 +88,7 @@ void ATPSSoundManager::InitSound()
 	AddSound(TEXT("Pistol_Shot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Pistol_Shot.Pistol_Shot'"));
 	AddSound(TEXT("Rifle_Shot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Rifle_Shot.Rifle_Shot'"));
 	AddSound(TEXT("Shotgun_Shot"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Shotgun_Shot.Shotgun_Shot'"));
+	AddSound(TEXT("Swosh"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Whosh.Whosh'"));
 
 	AddSound(TEXT("ReloadHandGun"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Reload.Reload'"));
 	AddSound(TEXT("ShellSound1"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShellSound1.ShellSound1'"));
@@ -96,5 +97,14 @@ void ATPSSoundManager::InitSound()
 	AddSound(TEXT("ShotShellSound"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShotShellSound.ShotShellSound'"));
 	AddSound(TEXT("MagazineDrop"), TEXT("Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'"));
 	///Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'
+	AddSound(TEXT("FootStep_Ground_1"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_1.ground_1'"));
+	AddSound(TEXT("FootStep_Ground_2"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_2.ground_2'"));
+	AddSound(TEXT("FootStep_Ground_3"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_3.ground_3'"));
+	AddSound(TEXT("FootStep_Ground_4"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_4.ground_4'"));
+	AddSound(TEXT("FootStep_Ground_5"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_5.ground_5'"));
+	AddSound(TEXT("ClothFlap"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ClothFlap.ClothFlap'"));
+	AddSound(TEXT("Backpack1"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Backpack1.Backpack1'"));
+	AddSound(TEXT("Backpack2"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Backpack2.Backpack2'"));
+	AddSound(TEXT("Backpack3"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/Backpack2.Backpack2'"));
 }
 

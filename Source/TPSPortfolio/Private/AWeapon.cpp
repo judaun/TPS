@@ -36,12 +36,6 @@ AWeapon::AWeapon() : Equipment()
 		CameraRecoilCurve = FOBJ_Curve.Object;
 	}
 
-	ConstructorHelpers::FObjectFinder<UMaterial> FOBJ_MatBulletHole(TEXT("/Script/Engine.Material'/Game/Effects/M_BulletHole.M_BulletHole'"));
-	if (FOBJ_MatBulletHole.Succeeded())
-	{
-		pDecalMaterial = FOBJ_MatBulletHole.Object;
-	}
-
 	fPitchRecoil = 0.f;
 	fYawRecoil = 0.f;
 	fAimRate = 0.f;
@@ -87,18 +81,17 @@ void AWeapon::InitializeMesh(FString weaponaddress)
 
 	pMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
-	FString strFireEffName = FString::Printf(TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_%sFire.FX_%sFire'"), *FEquipData.Name, *FEquipData.Name);
-	FireEffectMuzzle = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, *strFireEffName));
-	if (FireEffectMuzzle)
+	FString strFireEffName = FString::Printf(TEXT("%s_Fire"), *FEquipData.Name);
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
 	{
-		pNiagaraCom = UNiagaraFunctionLibrary::SpawnSystemAttached(FireEffectMuzzle, pMesh, TEXT("Muzzle"), FVector(0.f), FRotator(0.f), EAttachLocation::Type::KeepRelativeOffset, false);
+		pNiagaraCom = UNiagaraFunctionLibrary::SpawnSystemAttached(pGameInstance->GetEffect(strFireEffName), pMesh, TEXT("Muzzle"), FVector(0.f), FRotator(0.f), EAttachLocation::Type::KeepRelativeOffset, false);
 		if (pNiagaraCom)
 		{
 			pNiagaraCom->Deactivate();
-			
 		}
 	}
-	HitEffect = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), NULL, TEXT("Script/Niagara.NiagaraSystem'/Game/Effects/FX_GunHit.FX_GunHit'")));
+
 }
 
 FString AWeapon::GetWeaponTypeName(EWeaponType weapontype)
@@ -412,19 +405,13 @@ void AWeapon::OnRecoilTimelineFinish()
 
 void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator)
 {
-	if (HitEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HitEffect, Location, Rotator, FVector(0.5f), true);
-	}
-
-	if (nullptr == pDecalMaterial) return;
 	Rotator.Pitch += 90;
-	ADecalActor* pDecalActor = GetWorld()->SpawnActor<ADecalActor>(Location, Rotator);
-	if (!IsValid(pDecalActor)) return;
 
-	pDecalActor->SetDecalMaterial(pDecalMaterial);
-	pDecalActor->SetLifeSpan(5.f);
-	pDecalActor->GetDecal()->DecalSize = FVector(4.f, 4.f, 4.f);
-	pDecalActor->GetDecal()->FadeScreenSize = 0.002f;
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		pGameInstance->SpawnEffect(TEXT("BulletHit"), GetWorld(), Location, Rotator, FVector(0.5f), true);
+		pGameInstance->SpawnDecal(TEXT("BulletHole"), GetWorld(), 5.f, Location, Rotator, FVector(4.f), 0.002f);
+	}
 }
 

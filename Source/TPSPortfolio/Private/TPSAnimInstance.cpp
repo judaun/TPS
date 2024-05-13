@@ -5,6 +5,7 @@
 #include "TPSPortfolioCharacter.h"
 #include "TPSEnum.h"
 #include "Animation/AnimMontage.h"
+#include "TPSGameInstance.h"
 
 void UTPSAnimInstance::NativeInitializeAnimation()
 {
@@ -279,6 +280,13 @@ void UTPSAnimInstance::AnimNotify_WeaponSet()
 {
 	if (nullptr == pCharacter) return;
 	pCharacter->NotifyEquip();
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		int32 irand = rand() % 3 + 1;
+		FString strSoundName = FString::Printf(TEXT("Backpack%i"), irand);
+		pGameInstance->StartSoundLocation(*strSoundName, GetWorld(), pCharacter->GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
 }
 
 void UTPSAnimInstance::AnimNotify_JumpAway()
@@ -298,4 +306,51 @@ void UTPSAnimInstance::AnimNotify_CrawlEnd()
 	if (nullptr == pCharacter) return;
 	pCharacter->SetCrawlEnd();
 	UE_LOG(LogTemp, Log, TEXT("EndCrawl"));
+}
+
+void UTPSAnimInstance::AnimNotify_Footstep_L()
+{
+	if (nullptr == pCharacter || nullptr == pCharacter->GetMesh()) return;
+
+	FVector vLocation = pCharacter->GetMesh()->GetSocketLocation(FName("L_Ankle"));
+	int32 irand = rand() % 5 + 1;
+	FString strSoundName = FString::Printf(TEXT("FootStep_Ground_%i"), irand);
+	FRotator rotDacal = pCharacter->GetActorRotation() - pCharacter->GetMesh()->GetRelativeRotation() - pCharacter->GetFootRotator(true);
+
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		pGameInstance->SpawnEffect(TEXT("Dust"), GetWorld(), vLocation, pCharacter->GetActorRotation());
+		pGameInstance->StartSoundLocation(strSoundName, GetWorld(), vLocation, ESoundAttenuationType::SOUND_SILENCE, 0.2f);
+		pGameInstance->SpawnDecal(TEXT("FootStep_L"), GetWorld(), 3.f, vLocation, rotDacal, FVector(15.f));
+	}
+		
+}
+
+void UTPSAnimInstance::AnimNotify_Footstep_R()
+{
+	if (nullptr == pCharacter || nullptr == pCharacter->GetMesh()) return;
+
+	FVector vLocation = pCharacter->GetMesh()->GetSocketLocation(FName("R_Ankle"));
+	int32 irand = rand() % 5 + 1;
+	FString strSoundName = FString::Printf(TEXT("FootStep_Ground_%i"), irand);
+	FRotator rotDacal = pCharacter->GetActorRotation() - pCharacter->GetMesh()->GetRelativeRotation() - pCharacter->GetFootRotator(true);
+
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		pGameInstance->SpawnEffect(TEXT("Dust"), GetWorld(), vLocation, pCharacter->GetActorRotation());
+		pGameInstance->StartSoundLocation(strSoundName, GetWorld(), vLocation, ESoundAttenuationType::SOUND_SILENCE, 0.2f);
+		pGameInstance->SpawnDecal(TEXT("FootStep_L"), GetWorld(), 3.f, vLocation, rotDacal, FVector(15.f));
+	}
+}
+
+void UTPSAnimInstance::AnimNotify_Swosh()
+{
+	if (nullptr == pCharacter) return;
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		pGameInstance->StartSoundLocationRandomPitch(TEXT("Swosh"), GetWorld(), pCharacter->GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE, 0.5f);
+	}
 }

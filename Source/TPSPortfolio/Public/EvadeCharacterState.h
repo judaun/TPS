@@ -21,5 +21,5 @@ public:
 	void CalculateSpeed(float DeltaSeconds) override;
 	void Enter() override;
 	void Exit() override;
-	void SetImpulse();
+	void DustEffect();
 };
