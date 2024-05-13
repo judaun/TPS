@@ -138,7 +138,6 @@ protected:
 	void UpdateState(float DeltaSeconds);
 	void ChangeState(ECharacterState eChangeState);
 	bool CanChangeState(ECharacterState changestate);
-	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

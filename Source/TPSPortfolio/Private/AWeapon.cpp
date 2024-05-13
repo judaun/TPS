@@ -32,7 +32,6 @@ AWeapon::AWeapon() : Equipment()
 	ConstructorHelpers::FObjectFinder<UCurveVector> FOBJ_Curve(TEXT("/Script/Engine.CurveVector'/Game/ThirdPerson/Curves/RecoilCurve.RecoilCurve'"));
 	if (FOBJ_Curve.Succeeded())
 	{
-		UE_LOG(LogTemp, Log, TEXT("CameraRecoilCurve load Success"));
 		CameraRecoilCurve = FOBJ_Curve.Object;
 	}
 
