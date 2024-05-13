@@ -7,6 +7,9 @@
 /**
  * 
  */
+#define MINIMUM_TURN_DEGREE 15.f
+#define ALLOW_TURN_DEGREE 1.f
+
 class TPSPORTFOLIO_API AimCharacterState : public TPSCharacterState
 {
 public:
@@ -20,4 +23,10 @@ public:
 	void LocoMotionDirection();
 	void Enter() override;
 	void Exit() override;
+	void TimerTurn(float DeltaSeconds);
+	void SetTimer(float TimerTime);
+	void CrawlAim();
+private:
+	float fTimer;
+	bool bIsTimeOut;
 };

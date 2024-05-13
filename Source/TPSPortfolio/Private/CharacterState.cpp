@@ -6,6 +6,7 @@
 
 TPSCharacterState::TPSCharacterState()
 {
+	vLastDirection = FVector::ZeroVector;
 }
 
 TPSCharacterState::~TPSCharacterState()

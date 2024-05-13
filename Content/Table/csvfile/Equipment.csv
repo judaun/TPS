@@ -1,0 +1,2 @@
+﻿,Itemkey,Name,EquipType,WeaponType,ProjectileType,iBaseDmg,fBaseAttInterval,fBaseAccuracy,fBaseRange,iBaseCapacity,iBaseMagazine,fBaseReloadTime
+1,1,Desert_Eagle,EQUIP_MAIN_WEAPON,WEAPON_HANDGUN,PROJECTILE_TRACE,1000,500,900,5000,15,5,3000
