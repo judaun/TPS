@@ -1,0 +1,2 @@
+,Itemkey,Name,EnemyType,Health,Damage,Speed,DetectLength,ProjectileDamage,fAttInterval
+1,1,SpiderBot,ENEMY_ASSAULT,3000,100,500,400,0,10000

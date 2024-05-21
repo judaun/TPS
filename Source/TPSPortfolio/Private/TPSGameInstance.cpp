@@ -3,6 +3,7 @@
 
 #include "TPSGameInstance.h"
 #include "TPSSoundManager.h"
+#include "TPSEnemyMng.h"
 #include "TPSEffectMng.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TPSEnum.h"
@@ -12,6 +13,7 @@ UTPSGameInstance::UTPSGameInstance()
 	Initialize_DataTable();
 	pSoundMng = CreateDefaultSubobject<ATPSSoundManager>(TEXT("SoundManager"));
 	pEffectMng = CreateDefaultSubobject<ATPSEffectMng>(TEXT("EffectManager"));
+	pEnemyMng = CreateDefaultSubobject<ATPSEnemyMng>(TEXT("EnemyManager"));
 	srand((uint32)time(NULL));
 }
 
@@ -97,6 +99,12 @@ void UTPSGameInstance::SpawnDecal(FString keyname, TObjectPtr<UWorld> WorldConte
 {
 	if (nullptr == pEffectMng) return;
 	pEffectMng->SpawnDecal(keyname, WorldContextObject, lifetime, Location, Rotation, Scale, fadedistancesize);
+}
+
+void UTPSGameInstance::SpawnEnemy(int32 key, const UWorld* world, FVector location, FRotator rotator)
+{
+	if(nullptr == pEnemyMng) return;
+	pEnemyMng->SpawnEnemy(key,world,location,rotator);
 }
 
 UNiagaraSystem* UTPSGameInstance::GetEffect(FString keyname)

@@ -45,6 +45,8 @@ public:
 	void SpawnEffect(FString keyname, const UObject* WorldContextObject, FVector Location, FRotator Rotation = FRotator::ZeroRotator, FVector Scale = FVector(1.f), bool bAutoDestroy = true);
 	/* 로드된 데칼마테리얼을 월드로 스폰 */
 	void SpawnDecal(FString keyname, TObjectPtr<UWorld> WorldContextObject, float lifetime, FVector Location, FRotator Rotation = FRotator::ZeroRotator, FVector Scale = FVector(1.f), float fadedistancesize = 0.01f);
+	/* 로드된 매니저에서 월드로 스폰 */
+	void SpawnEnemy(int32 key, const UWorld* world, FVector location, FRotator rotator);
 	/* 엑터에 Attach 하기 위한 나이아가라 시스템 포인터 반환 */
 	UNiagaraSystem* GetEffect(FString keyname);
 
@@ -59,4 +61,7 @@ private:
 
 	UPROPERTY()
 	ATPSEffectMng* pEffectMng;
+
+	UPROPERTY()
+	class ATPSEnemyMng* pEnemyMng;
 };
