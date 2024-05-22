@@ -16,6 +16,7 @@ class TPSPORTFOLIO_API UDeadEnemyState : public UEnemyState
 	UDeadEnemyState();
 
 private:
+	void Explosion();
 protected:
 public:
 	void Process(float deltatime) override;

@@ -13,6 +13,8 @@
 #include "SpawnEnemyState.h"
 #include "TPSEnum.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Engine/EngineTypes.h"
+#include "Engine/DamageEvents.h"
 
 
 // Sets default values
@@ -23,6 +25,7 @@ AEnemy::AEnemy(const FObjectInitializer& ObjectInitializer)
 	AIControllerClass = AEnemyController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
+	GetCapsuleComponent()->SetCollisionProfileName(FName("Enemy"));
 	GetCharacterMovement()->RotationRate.Yaw = 180.f;
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	bUseControllerRotationPitch = false;
@@ -102,6 +105,11 @@ void AEnemy::SetEnemyData(FEnemyTable* enemydata)
 
 }
 
+void AEnemy::BreakBone()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
 void AEnemy::SetTargetActor(AActor* actor)
 {
 	if(nullptr == actor) return;
@@ -126,6 +134,7 @@ void AEnemy::ChangeState(EEnemyState changestate)
 {
 	if (nullptr == wpCurState || !wpCurState.Get()) return;
 	if(changestate == wpCurState->GetState()) return;
+	if(wpCurState->GetState() == EEnemyState::DEAD) return;
 
 	for (auto elem : TA_State)
 	{
@@ -147,6 +156,39 @@ void AEnemy::UpdateState(float deltatime)
 {
 	if(nullptr == wpCurState || !wpCurState.Get()) return;
 	wpCurState->Process(deltatime);
+}
+
+float AEnemy::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float fDmg = Super::TakeDamage(Damage, DamageEvent,EventInstigator,DamageCauser);
+
+	//포인트 데미지 타입 검사
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+		//특정 부위 처리
+		UE_LOG(LogTemp,Log,TEXT("Hit : %s"), PointDamageEvent->HitInfo.BoneName);
+	}
+	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
+	{
+		const FRadialDamageEvent* RadialDamageEvent = static_cast<const FRadialDamageEvent*>(&DamageEvent);
+		//방사 데미지 처리
+		UE_LOG(LogTemp, Log, TEXT("RadialHit : %f"), fDmg);
+
+		FVector vSrc = RadialDamageEvent->Origin;
+		FVector vDst = GetActorLocation();
+		FVector vDirection = (vDst-vSrc).GetSafeNormal();
+		vDirection.Z += 0.4f;
+		GetCharacterMovement()->AddImpulse(vDirection* fDmg/2.f,true);
+
+	}
+
+	iCurHealth -= ceil(fDmg);
+
+	if(iCurHealth <= 0)
+	ChangeState(EEnemyState::DEAD);
+
+	return fDmg;
 }
 
 void AEnemy::SetisAttacking(bool attacking)

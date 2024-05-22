@@ -40,6 +40,8 @@ public:
 	void StartSoundLocation(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
 	/* 사운드 월드 위치에서 랜덤피치(높낮이변화)로 재생 */
 	void StartSoundLocationRandomPitch(FString soundname, const UObject* world, FVector location, ESoundAttenuationType atttype, float volume = 1.f, bool isloop = false);
+	/* 카메라 흔들기 재생 */
+	void ClientCameraShake(FString keyname, APlayerController* controller, float scale);
 
 	/* 로드된 나이아가라 시스템을 월드로 스폰 */
 	void SpawnEffect(FString keyname, const UObject* WorldContextObject, FVector Location, FRotator Rotation = FRotator::ZeroRotator, FVector Scale = FVector(1.f), bool bAutoDestroy = true);
@@ -64,4 +66,7 @@ private:
 
 	UPROPERTY()
 	class ATPSEnemyMng* pEnemyMng;
+
+	UPROPERTY()
+	class ATPSCamaraMng* pCameraMng;
 };

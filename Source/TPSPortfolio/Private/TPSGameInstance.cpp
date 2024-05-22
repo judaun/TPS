@@ -5,6 +5,7 @@
 #include "TPSSoundManager.h"
 #include "TPSEnemyMng.h"
 #include "TPSEffectMng.h"
+#include "TPSCamaraMng.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TPSEnum.h"
 
@@ -14,6 +15,7 @@ UTPSGameInstance::UTPSGameInstance()
 	pSoundMng = CreateDefaultSubobject<ATPSSoundManager>(TEXT("SoundManager"));
 	pEffectMng = CreateDefaultSubobject<ATPSEffectMng>(TEXT("EffectManager"));
 	pEnemyMng = CreateDefaultSubobject<ATPSEnemyMng>(TEXT("EnemyManager"));
+	pCameraMng = CreateDefaultSubobject<ATPSCamaraMng>(TEXT("CameraManager"));
 	srand((uint32)time(NULL));
 }
 
@@ -87,6 +89,13 @@ void UTPSGameInstance::StartSoundLocationRandomPitch(FString soundname, const UO
 
 	pSoundMng->StartSoundLocationRandomPitch(*soundname, world, location, atttype, volume, isloop);
 
+}
+
+void UTPSGameInstance::ClientCameraShake(FString keyname, APlayerController* controller, float scale)
+{
+	if(nullptr == pCameraMng) return;
+
+	pCameraMng->ClientCameraShake(*keyname, controller, scale);
 }
 
 void UTPSGameInstance::SpawnEffect(FString keyname, const UObject* WorldContextObject, FVector Location, FRotator Rotation /*= FRotator::ZeroRotator*/, FVector Scale /*= FVector(1.f)*/, bool bAutoDestroy /*= true*/)

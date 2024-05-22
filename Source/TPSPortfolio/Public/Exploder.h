@@ -23,6 +23,7 @@ protected:
 	void InitializeMeshComponent() override;
 public:
 	void SetEnemyData(FEnemyTable* enemydata) override;
+	void BreakBone() override;
 
 	UFUNCTION(BlueprintCallable, Category = Enemy)
 	bool GetisAttacking() override { return bIsAttacking; }

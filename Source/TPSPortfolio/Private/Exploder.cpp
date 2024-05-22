@@ -50,3 +50,16 @@ void AExploder::SetEnemyData(FEnemyTable* enemydata)
 	InitializeDefaultComponent();
 	InitializeMeshComponent();
 }
+
+void AExploder::BreakBone()
+{
+	Super::BreakBone();
+	GetMesh()->SetCollisionProfileName(FName("Ragdoll"));
+	GetMesh()->BreakConstraint(FVector::ZeroVector, FVector::ZeroVector, FName("SpiderBot_Thigh_Front_Right"));
+	GetMesh()->BreakConstraint(FVector::ZeroVector, FVector::ZeroVector, FName("SpiderBot_Thigh_Front_Left"));
+	GetMesh()->BreakConstraint(FVector::ZeroVector, FVector::ZeroVector, FName("SpiderBot_Thigh_Rear_Left"));
+	GetMesh()->BreakConstraint(FVector::ZeroVector, FVector::ZeroVector, FName("SpiderBot_Thigh_Rear_Right"));
+	GetMesh()->BreakConstraint(FVector::ZeroVector, FVector::ZeroVector, FName("SpiderBot_Abdomen"));
+
+	GetMesh()->SetSimulatePhysics(true);
+}

@@ -46,6 +46,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UAnimInstance> AnimationInstance;
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
@@ -94,9 +98,15 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Weapon2Action;
 
+	/** RagdollTest Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* RagdollTestAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
+	class UAIPerceptionStimuliSourceComponent* pStimuliSource;
 public:
 	ATPSPortfolioCharacter();
 	~ATPSPortfolioCharacter();
@@ -122,7 +132,9 @@ protected:
 	void AttackComplete();
 	void Reload();
 	void Evade();
-	
+	void Ragdoll();
+	void RagdollComplete();
+
 	void WeaponChangePrimary();
 	void WeaponChangeSecondary();
 	
@@ -138,10 +150,15 @@ protected:
 	void UpdateState(float DeltaSeconds);
 	void ChangeState(ECharacterState eChangeState);
 	bool CanChangeState(ECharacterState changestate);
+	
+	UFUNCTION() void RPC_ChangeState(ECharacterState eChangeState);
+	UFUNCTION(Server, Reliable) void ServerRPC_ChangeState(ECharacterState eChangeState);
+	UFUNCTION(NetMulticast, Reliable) void MulticastRPC_ChangeState(ECharacterState eChangeState);
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	// To add mapping context
 	virtual void BeginPlay();
 
@@ -199,7 +216,13 @@ public:
 	bool GetIsCrawl() { return bIsCrawl; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
-	bool GetIsCrawltoIdle() { return bIsCrawltoIdle; }
+	bool GetIsCrawltoIdle() { return bIsRecoverytoIdle; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetIsRagdoll() { return bIsRagdoll; }
+	
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetIsLayingOnBack() { return bIsLayingOnBack; }
 
 public:
 	FVector GetChangeVector() { return vChangeDirection; }
@@ -241,6 +264,8 @@ public:
 	void SetCrawlEnd();
 
 	FRotator GetFootRotator(bool left);
+
+	void StimulusNoiseEvent();
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
@@ -253,6 +278,8 @@ private:
 
 	FVector vControlVectorX;
 	FVector vControlVectorY;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	FVector vChangeDirection;
 	FVector vLerpDirection;
 	FVector vAimPosition;
@@ -278,13 +305,14 @@ private:
 	bool bIsAimTurn;
 	bool bIsEquiping;
 	bool bIsEvade;
+	bool bIsRagdoll;
+	bool bIsLayingOnBack;
+	FVector vRagdollMeshLocation;
+
 	bool bIsCrawl;
-	bool bIsCrawltoIdle;
+	bool bIsRecoverytoIdle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	bool bIsReloading;
 public:
 	FDele_Player_Aimrate func_Player_Aimrate;

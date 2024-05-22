@@ -56,6 +56,7 @@ void ATPSEffectMng::InitEffectManager()
 	AddEffect(TEXT("Shotgun_Fire"), TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_ShotgunFire.FX_ShotgunFire'"));
 	AddEffect(TEXT("BulletHit"), TEXT("Script/Niagara.NiagaraSystem'/Game/Effects/FX_GunHit.FX_GunHit'"));
 	AddEffect(TEXT("Dust"), TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_Dust.FX_Dust'"));
+	AddEffect(Eff_key::DistortionBoom,TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_Boom.FX_Boom'"));
 	//Decal
 	AddDecal(TEXT("BulletHole"), TEXT("/Script/Engine.Material'/Game/Effects/M_BulletHole.M_BulletHole'"));
 	AddDecal(TEXT("FootStep_L"), TEXT("/Script/Engine.Material'/Game/Effects/M_FootStepL.M_FootStepL'"));

@@ -25,22 +25,26 @@ public:
 	AWeapon(FEquipmentTable* equipdata);
 	~AWeapon();
 
+//function///////////////////////////////////////////////////////
 private:
 	void InitializeMesh(FString weaponaddress);
 	FString GetWeaponTypeName(EWeaponType weapontype);
 	void InitMagazineMesh();
 	void InitTimeLine();
+	void SetSpawnDecal(FVector Location, FRotator Rotator);
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
 public:	
-	void SetPlayer(ATPSPortfolioCharacter* character);
-	void DeferredInitialize(FEquipmentTable* equipdata);
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	/* 플레이어 넘겨받아 WeakPtr로 보관 */
+	void SetPlayer(ATPSPortfolioCharacter* character);
+	/* DeferredSpawn으로 beginplay 전 데이터 세팅 */
+	void DeferredInitialize(FEquipmentTable* equipdata);
+	/* 공격용 트레이스 생성 */
 	void AttackTrace();
+	/* 재장전 완료 */
 	void Reload();
+	/* 재장전 시작 */
 	void ReloadStart();
 	void AttackStart();
 	void AttackStop();
@@ -62,9 +66,7 @@ public:
 	UFUNCTION()
 	void OnRecoilTimelineFinish();
 
-private:
-	void SetSpawnDecal(FVector Location, FRotator Rotator);
-
+//value///////////////////////////////////////////////////////
 private:
 	UPROPERTY()
 	USkeletalMeshComponent* pMesh;

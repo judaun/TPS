@@ -23,6 +23,11 @@
 #include "TPSAnimInstance.h"
 #include "C_FootIK.h"
 #include "TPSGameInstance.h"
+#include "Net/UnrealNetwork.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
+#include "Perception/AISense_Hearing.h"
+#include "TPSTag.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -62,6 +67,9 @@ void ATPSPortfolioCharacter::initialize()
 	GetCharacterMovement()->MaxWalkSpeed = 0.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 750.f;
+	GetCharacterMovement()->SetNetAddressable();
+	GetCharacterMovement()->SetIsReplicated(true);
+
 
 	vChangeDirection = GetActorForwardVector();
 	vLerpDirection = vChangeDirection;
@@ -87,7 +95,7 @@ void ATPSPortfolioCharacter::initialize()
 	bIsEquiping = false;
 	bIsEvade = false;
 	bIsCrawl = false;
-	bIsCrawltoIdle = false;
+	bIsRecoverytoIdle = false;
 
 	//auto stState = new IdleState();
 	//auto stState = new IdleCharacterState(this);
@@ -99,6 +107,9 @@ void ATPSPortfolioCharacter::initialize()
 	vecState.emplace_back(make_unique<EvadeCharacterState>(this));
 
 	stCharacterState = vecState[0].get();
+
+	SetReplicateMovement(true);
+	SetReplicates(true);
 }
 
 void ATPSPortfolioCharacter::InitializeInputContext()
@@ -120,6 +131,8 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload.IA_Reload"), &ReloadAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Primary.IA_Primary"), &Weapon1Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Secondary.IA_Secondary"), &Weapon2Action);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Ragdoll.IA_Ragdoll"), &RagdollTestAction);
+
 }
 
 void ATPSPortfolioCharacter::InitializeMeshComponent()
@@ -132,12 +145,15 @@ void ATPSPortfolioCharacter::InitializeMeshComponent()
 	{
 		GetMesh()->SetSkeletalMesh(FObj_Skmesh.Object);
 		GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+		vRagdollMeshLocation = GetMesh()->GetRelativeLocation();
 	}
 
 	ConstructorHelpers::FClassFinder<UAnimInstance> FObj_Anim(TEXT("Blueprint'/Game/Characters/PlayerCharacters/Vepley/ABP_Vepley.ABP_Vepley_C'"));
 	if (FObj_Anim.Succeeded())
 	{
 		GetMesh()->SetAnimInstanceClass(FObj_Anim.Class);
+		AnimationInstance = FObj_Anim.Class;
+		
 	}
 
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> FObj_Physics(TEXT("/Game/Characters/PlayerCharacters/Vepley/Mesh/Vepleysize10_Physics.Vepleysize10_Physics"));
@@ -153,6 +169,8 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
+	GetCapsuleComponent()->SetIsReplicated(true);
+	GetCapsuleComponent()->SetNetAddressable();
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -167,6 +185,10 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 
 	pInventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
 	FootIK = CreateDefaultSubobject<UC_FootIK>(TEXT("FootIK"));
+	FootIK->SetIsReplicated(true);
+
+	pStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("PerceptionStimuli"));
+	pStimuliSource->bAutoRegister = true;
 }
 
 void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
@@ -237,6 +259,9 @@ void ATPSPortfolioCharacter::BeginPlay()
 		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
 	}
 	
+	//AISight 탐지를 위한 스티뮬라이 추가
+	pStimuliSource->RegisterForSense(UAISense_Sight::StaticClass());
+	pStimuliSource->RegisterWithPerceptionSystem();
 }
 
 void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
@@ -245,6 +270,13 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 	Timer(DeltaSeconds);
 	CameraControl(DeltaSeconds);
 	UpdateState(DeltaSeconds);
+
+	if (bIsRagdoll)
+	{
+		FVector vRagdollposition = GetMesh()->GetComponentLocation();
+		GetCapsuleComponent()->SetWorldLocation(FVector(vRagdollposition.X, vRagdollposition.Y, vRagdollposition.Z- vRagdollMeshLocation.Z) );
+	
+	}
 }
 
 ECharacterState ATPSPortfolioCharacter::GetCharacterState()
@@ -340,7 +372,16 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		EnhancedInputComponent->BindAction(Weapon1Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangePrimary);
 		EnhancedInputComponent->BindAction(Weapon2Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangeSecondary);
 
+		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Ragdoll);
+		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::RagdollComplete);
+
 	}
+
+}
+
+void ATPSPortfolioCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 }
 
@@ -366,7 +407,15 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 		//움직임에 따른 회전 방향값 지정
 		SetMoveDirection(ForwardDirection, RightDirection, MovementVector);
 		SetIsMoving(true);
+
+		if (bIsRecoverytoIdle)
+		{
+			ChangeState(ECharacterState::IDLE);
+			return;
+		}
+			
 		ChangeState(bIsSprint ? ECharacterState::SPRINT : ECharacterState::RUN);
+
 	}
 }
 
@@ -376,7 +425,7 @@ void ATPSPortfolioCharacter::MoveComplete()
 	if (nullptr == stCharacterState)return;
 	if (stCharacterState->eState == ECharacterState::RUN ||
 		stCharacterState->eState == ECharacterState::SPRINT)
-	ChangeState(ECharacterState::IDLE);
+		ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
@@ -401,10 +450,10 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 
 void ATPSPortfolioCharacter::Aim()
 {
-	if (bIsCrawltoIdle) {
+	if (bIsRecoverytoIdle) {
 		if(nullptr != stCharacterState &&
 			stCharacterState->eState == ECharacterState::AIM)
-		ChangeState(ECharacterState::IDLE);
+			ChangeState(ECharacterState::IDLE);
 		return;
 	}
 	ChangeState(ECharacterState::AIM);
@@ -413,7 +462,7 @@ void ATPSPortfolioCharacter::Aim()
 void ATPSPortfolioCharacter::AimComplete()
 {
 	if(stCharacterState->eState != ECharacterState::EVADE)
-	ChangeState(ECharacterState::IDLE);
+		ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Attack()
@@ -463,12 +512,30 @@ void ATPSPortfolioCharacter::Evade()
 {
 	if (bIsCrawl)
 	{
-		if(!bIsCrawltoIdle)
-			bIsCrawltoIdle = true;
+		if(!bIsRecoverytoIdle)
+			bIsRecoverytoIdle = true;
 		return;
 	}
-
+	
 	ChangeState(ECharacterState::EVADE);
+}
+
+void ATPSPortfolioCharacter::Ragdoll()
+{
+	bIsRagdoll = true;
+	bIsRecoverytoIdle = true;
+	GetMesh()->SetAllBodiesSimulatePhysics(true);
+}
+
+void ATPSPortfolioCharacter::RagdollComplete()
+{
+	GetMesh()->GetAnimInstance()->SavePoseSnapshot(FName("Ragdoll"));
+	bIsLayingOnBack = abs(GetMesh()->GetSocketRotation(FName("Hips")).Roll) < 90.f;
+
+	bIsRagdoll = false;
+	GetMesh()->SetAllBodiesSimulatePhysics(false);
+	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform, FName(""));
+	GetMesh()->SetRelativeLocationAndRotation(vRagdollMeshLocation, FRotator(0.f, 270.f, 0.f));
 }
 
 void ATPSPortfolioCharacter::EvadeComplete()
@@ -589,6 +656,8 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 		fAimAngle = 0.f;
 		return;
 	}
+
+	if (nullptr == Controller) return;
 
 	//카메라 컴포넌트포지션
 	FVector vecWorldLocation = FollowCamera->GetComponentLocation();
@@ -795,8 +864,7 @@ void ATPSPortfolioCharacter::ChangeState(ECharacterState eChangeState)
 		stCharacterState->Enter();
 		break;
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("ChangeState : %i"), eChangeState);
+	UE_LOG(LogTemp, Log, TEXT("ChangeState: %i"), eChangeState);
 }
 
 bool ATPSPortfolioCharacter::CanChangeState(ECharacterState changestate)
@@ -819,6 +887,21 @@ bool ATPSPortfolioCharacter::CanChangeState(ECharacterState changestate)
 	return true;
 }
 
+void ATPSPortfolioCharacter::RPC_ChangeState(ECharacterState eChangeState)
+{
+	ServerRPC_ChangeState(eChangeState);
+}
+
+void ATPSPortfolioCharacter::ServerRPC_ChangeState_Implementation(ECharacterState eChangeState)
+{
+	MulticastRPC_ChangeState(eChangeState);
+}
+
+void ATPSPortfolioCharacter::MulticastRPC_ChangeState_Implementation(ECharacterState eChangeState)
+{
+	ChangeState(eChangeState);
+}
+
 void ATPSPortfolioCharacter::PlayAttack(bool ismelee)
 {
 	if (bIsCrawl) return;
@@ -839,7 +922,7 @@ void ATPSPortfolioCharacter::PlayAttack(bool ismelee)
 void ATPSPortfolioCharacter::SetCrawlEnd()
 {
 	bIsCrawl = false;
-	bIsCrawltoIdle = false;
+	bIsRecoverytoIdle = false;
 }
 
 FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
@@ -847,5 +930,10 @@ FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
 	if (!IsValid(FootIK)) return FRotator::ZeroRotator;
 
 	return Cast<UC_FootIK>(FootIK)->GetFootIK(left);
+}
+
+void ATPSPortfolioCharacter::StimulusNoiseEvent()
+{
+	UAISense_Hearing::ReportNoiseEvent(GetWorld(), GetActorLocation(), 1.f, this, 0.f, ai_tag::noise_tag);
 }
 

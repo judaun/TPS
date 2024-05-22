@@ -8,6 +8,11 @@
 
 class UNiagaraSystem;
 
+namespace Eff_key
+{
+	TCHAR* const DistortionBoom = TEXT("DistBoon");
+}
+
 UCLASS()
 class TPSPORTFOLIO_API ATPSEffectMng : public AActor
 {

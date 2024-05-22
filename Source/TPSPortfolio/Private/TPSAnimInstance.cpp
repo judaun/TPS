@@ -15,7 +15,6 @@ void UTPSAnimInstance::NativeInitializeAnimation()
 		pCharacter = TWeakObjectPtr<ATPSPortfolioCharacter>(Cast<ATPSPortfolioCharacter>(pPawn));
 
 	InitMontage();
-
 }
 
 void UTPSAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -50,7 +49,7 @@ void UTPSAnimInstance::PlayAnimMontage()
 		return;
 	}
 
-	if (pCharacter->GetIsCrawl())
+	if (pCharacter->GetIsCrawl()|| pCharacter->GetIsCrawltoIdle())
 	{
 		Montage_Stop(0.1f);
 		return;

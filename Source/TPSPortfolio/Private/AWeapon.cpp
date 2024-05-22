@@ -161,7 +161,6 @@ void AWeapon::BeginPlay()
 	
 	InitMagazineMesh();
 	InitTimeLine();
-
 }
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
@@ -224,11 +223,13 @@ void AWeapon::AttackTrace()
 	if (iCurrentCapacity <= 0) return;
 	--iCurrentCapacity;
 
+	//공격 인터벌 추가
 	fFireMenual += FEquipData.fBaseAttInterval / 1000.f;
 
 	//Bullet spawn pos
 	FVector vfireStart = pMesh->GetSocketLocation(TEXT("Muzzle"));
 	FVector vDir;
+	//트레이스 생성 갯수 조절
 	int32 iFirecnt = FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN ? 10 : 1;
 	for (int32 i = 0; i < iFirecnt; ++i)
 	{
@@ -252,6 +253,10 @@ void AWeapon::AttackTrace()
 			if (hitResult.GetActor())
 			{
 				auto hitActor = hitResult.GetActor();
+
+				FVector vHitDirection = (hitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+				UGameplayStatics::ApplyPointDamage(hitActor, FEquipData.iBaseDmg, vHitDirection, hitResult, pCharacter->GetController(),this,NULL);
+
 				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
 			}
 			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
@@ -286,6 +291,9 @@ void AWeapon::AttackTrace()
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	FString strSoundName = FString::Printf(TEXT("%s_Shot"), *FEquipData.Name);
 	if (nullptr != pGameInstance) pGameInstance->StartSoundLocationRandomPitch(*strSoundName, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
+
+	//소리 PerceptionEvent 발생
+	pCharacter->StimulusNoiseEvent();
 }
 
 void AWeapon::Reload()

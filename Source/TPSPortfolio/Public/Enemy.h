@@ -36,6 +36,8 @@ public:
 	virtual void SetEnemyData(FEnemyTable* enemydata);
 	FEnemyTable GetEnemyData() { return EnemyData;}
 
+	virtual void BreakBone();
+
 	/* Enemy의 공격 및 회전추적을 위한 타겟 엑터 지정 */
 	void SetTargetActor(AActor* actor);
 	/* 타겟 위치 반환 */
@@ -49,6 +51,7 @@ public:
 	/* EnemyState 기능 갱신 */
 	void UpdateState(float deltatime);
 
+	float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	virtual bool GetisAttacking() { return bIsAttacking; }
 	virtual void SetisAttacking(bool attacking);
 //value/////////////////////////////////////////////////////
