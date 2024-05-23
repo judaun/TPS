@@ -28,6 +28,7 @@
 #include "Perception/AISense_Sight.h"
 #include "Perception/AISense_Hearing.h"
 #include "TPSTag.h"
+#include "Engine/DamageEvents.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -86,6 +87,8 @@ void ATPSPortfolioCharacter::initialize()
 	fBrakeTimer = 0.f;
 	fFrontAcos = 1.f;
 	iWeaponIndex = 0;
+	iMaxHealth = 10000;
+	iCurHealth = iMaxHealth;
 	bIsRun = true;
 	bIsSprint = false;
 	bIsMoving = false;
@@ -216,7 +219,7 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 	FName WeaponSocket(TEXT("r_hand_rifle"));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(0));
-	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
+	//WeaponSlot.Emplace(pInventory->LoadWeapon(1));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
 	
 	for (auto elem : WeaponSlot)
@@ -291,6 +294,57 @@ EWeaponType ATPSPortfolioCharacter::GetWeaponType()
 	if (!IsValid(pCurWeapon)) return EWeaponType::WEAPON_NONE;
 
 	return pCurWeapon->GetWeaponType();
+}
+
+float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float fDmg = Super::TakeDamage(Damage,DamageEvent,EventInstigator,DamageCauser);
+
+	//포인트 데미지
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+
+	}
+	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
+	{
+		const FRadialDamageEvent* RadialDamageEvent = static_cast<const FRadialDamageEvent*>(&DamageEvent);
+
+		FVector vSrc = RadialDamageEvent->Origin;
+		FVector vDst = GetActorLocation();
+		FVector vDirection = (vDst - vSrc).GetSafeNormal();
+		vDirection.Z = 0.4f;
+
+		UE_LOG(LogTemp, Log, TEXT("CharacterDmg : %f"), fDmg);
+
+		if (fDmg > 2000.f)
+			Ragdoll();
+
+		AddMovementInput(FVector::UpVector, 10.f);
+		GetCharacterMovement()->AddImpulse(vDirection * (fDmg / 4.f), true);
+		
+
+	}
+
+	iCurHealth -= ceil(fDmg);
+	if(iCurHealth <= 0)
+		Ragdoll();
+
+	return fDmg;
+}
+
+void ATPSPortfolioCharacter::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+{
+	Super::NotifyHit(MyComp,Other,OtherComp,bSelfMoved,HitLocation,HitNormal,NormalImpulse,Hit);
+
+	if (OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Hit Static"));
+		if (bIsRagdoll)
+		{
+			if(!GetWorldTimerManager().IsTimerActive(Ragdolltimehandle))
+				GetWorldTimerManager().SetTimer(Ragdolltimehandle, [this](){RagdollComplete();}, 2.f,false);
+		}
+	}
 }
 
 FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
@@ -536,6 +590,9 @@ void ATPSPortfolioCharacter::RagdollComplete()
 	GetMesh()->SetAllBodiesSimulatePhysics(false);
 	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform, FName(""));
 	GetMesh()->SetRelativeLocationAndRotation(vRagdollMeshLocation, FRotator(0.f, 270.f, 0.f));
+
+	if(Ragdolltimehandle.IsValid())
+	GetWorldTimerManager().ClearTimer(Ragdolltimehandle);
 }
 
 void ATPSPortfolioCharacter::EvadeComplete()

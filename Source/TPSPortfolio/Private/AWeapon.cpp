@@ -13,7 +13,7 @@
 #include "Components/DecalComponent.h"
 #include "TPSGameInstance.h"
 
-#define MAXIMUM_RECOIL_POS 100
+#define MAXIMUM_RECOIL_ANGLE 5
 
 // Sets default values
 AWeapon::AWeapon() : Equipment()
@@ -236,8 +236,14 @@ void AWeapon::AttackTrace()
 		if (pCharacter.IsValid())
 		{
 			pCharacter->PlayAttack();
-			FVector vAimPos = pCharacter->GetAimPosVector() + GetAimrateRecoilPosition();
+			float fYawAngle = 0.f;
+			float fPitchAngle = 0.f;
+			GetAimrateRecoilPosition(&fYawAngle, &fPitchAngle);
+			FVector vAimPos = pCharacter->GetAimPosVector();
 			vDir = (vAimPos - vfireStart).GetSafeNormal();
+			vDir = vDir.RotateAngleAxis(fYawAngle,FVector::UpVector);
+			vDir = vDir.RotateAngleAxis(fPitchAngle, pCharacter->GetControlVector(false));
+			UE_LOG(LogTemp,Log,TEXT("%f,%f"), fYawAngle, fPitchAngle);
 		}
 
 
@@ -360,27 +366,18 @@ void AWeapon::SetHide(bool hide)
 	pMagazine->SetActorHiddenInGame(hide);
 }
 
-FVector AWeapon::GetAimrateRecoilPosition()
+void AWeapon::GetAimrateRecoilPosition(float* yawangle, float* pitchangle)
 {
-	float fX = 0.f;
-	float fY = 0.f;
-	float fZ = 0.f;
-
 	float fCharacterAimrate = fAimRate * 0.5f; // 0 ~ 0.5
 	float fWeaponAimrate = 1.f - (FEquipData.fBaseAccuracy/1000.f); // 0 ~ 1
-	float fMaxlen = MAXIMUM_RECOIL_POS * (fCharacterAimrate + fWeaponAimrate) +1; // 1000 * (0~1.5)+zerodivide보정
+	float fMaxlen = MAXIMUM_RECOIL_ANGLE * (fCharacterAimrate + fWeaponAimrate) +1; // 1000 * (0~1.5)+zerodivide보정
 
-	fX = rand() % (int)fMaxlen;
-	fY = rand() % (int)fMaxlen;
-	fZ = rand() % (int)fMaxlen;
+	*yawangle = rand() % (int)(fMaxlen*100.f) / 100.f;
+	*pitchangle = rand() % (int)(fMaxlen*100.f) / 100.f;
 
-	fX *= rand() % 2 == 0 ? -1.f : 1.f;
-	fY *= rand() % 2 == 0 ? -1.f : 1.f;
-	fZ *= rand() % 2 == 0 ? -1.f : 1.f;
+	*yawangle *= rand() % 2 == 0 ? -1.f : 1.f;
+	*pitchangle *= rand() % 2 == 0 ? -1.f : 1.f;
 
-	UE_LOG(LogTemp, Log, TEXT("MaxLen :%f, X:%f, Y:%f, Z:%f"), fMaxlen, fX, fY, fZ);
-
-	return FVector(fX, fY, fZ);
 }
 
 bool AWeapon::IsFullCapacity()

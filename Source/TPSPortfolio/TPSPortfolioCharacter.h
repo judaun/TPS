@@ -9,6 +9,7 @@
 #include "CharacterState.h"
 #include "AWeapon.h"
 #include "Inventory.h"
+#include "Components/TimelineComponent.h"
 #include "TPSPortfolioCharacter.generated.h"
 
 #define BRAKE_RUN 0.5f
@@ -38,6 +39,7 @@ class ATPSPortfolioCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+#pragma region Components
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
@@ -107,16 +109,17 @@ class ATPSPortfolioCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	class UAIPerceptionStimuliSourceComponent* pStimuliSource;
+
+#pragma endregion
+
 public:
 	ATPSPortfolioCharacter();
 	~ATPSPortfolioCharacter();
-
 private:
 	void initialize();
 	void InitializeInputContext();
 	void InitializeMeshComponent();
 	void InitializeDefaultComponent();
-
 	void IAFactory(FString address, UInputAction** uiaction);
 protected:
 	void Move(const FInputActionValue& Value);
@@ -155,7 +158,6 @@ protected:
 	UFUNCTION(Server, Reliable) void ServerRPC_ChangeState(ECharacterState eChangeState);
 	UFUNCTION(NetMulticast, Reliable) void MulticastRPC_ChangeState(ECharacterState eChangeState);
 
-protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -170,6 +172,7 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+#pragma region BlueprintCallable
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	bool GetisBraking() {return bIsBraking;}
 
@@ -223,8 +226,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	bool GetIsLayingOnBack() { return bIsLayingOnBack; }
+#pragma endregion
 
 public:
+	float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
 	FVector GetControlVector(bool IsFoward = true);
@@ -269,7 +276,9 @@ public:
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
-
+	
+	FTimerHandle Ragdolltimehandle;
+	
 	UPROPERTY()
 	TArray<AWeapon*> WeaponSlot;
 
@@ -296,6 +305,8 @@ private:
 	float fFrontAcos;
 
 	int32 iWeaponIndex;
+	int32 iCurHealth;
+	int32 iMaxHealth;
 
 	bool bIsRun;
 	bool bIsSprint;

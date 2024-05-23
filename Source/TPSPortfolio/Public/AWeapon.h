@@ -56,7 +56,7 @@ public:
 
 	EWeaponType GetWeaponType() { return FEquipData.WeaponType; }
 
-	FVector GetAimrateRecoilPosition();
+	void GetAimrateRecoilPosition(float* yawangle, float* pitchangle);
 	bool IsFullCapacity();
 	bool IsPosibleReload();
 
