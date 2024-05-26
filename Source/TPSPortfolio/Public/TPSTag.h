@@ -12,3 +12,8 @@ namespace ai_tag
 {
 	TCHAR* const noise_tag = TEXT("Noise");
  }
+
+namespace cap_tag
+{
+	TCHAR* const EnemyDmgCap = TEXT("EnemyDamageCapsule");
+ }

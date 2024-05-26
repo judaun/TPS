@@ -3,6 +3,10 @@
 
 #include "Exploder.h"
 #include "QuadFootIK.h"
+#include "TPSTag.h"
+#include "TPSSoundManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "TPSGameInstance.h"
 #include "Components/CapsuleComponent.h"
 
 AExploder::AExploder(const FObjectInitializer& ObjectInitializer)
@@ -11,11 +15,30 @@ AExploder::AExploder(const FObjectInitializer& ObjectInitializer)
 	bIsAttacking = false;
 }
 
+void AExploder::ServoMotorSound()
+{
+
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		bool bIsEven = rand() % 2 == 0;
+		pInstance->StartSoundLocation(bIsEven ? sound_key::Servo1 : sound_key::Servo2, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE, 0.5f);
+	}
+}
+
 void AExploder::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
+	if(!GetWorldTimerManager().IsTimerActive(Soundtimehandle))
+		GetWorldTimerManager().SetTimer(Soundtimehandle, [this](){ServoMotorSound();},3.f, true);
+}
+
+void AExploder::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+
 }
 
 void AExploder::InitializeDefaultComponent()
@@ -27,6 +50,17 @@ void AExploder::InitializeDefaultComponent()
 	GetCapsuleComponent()->SetHiddenInGame(false);
 	pFootIK = NewObject<UQuadFootIK>(this, UQuadFootIK::StaticClass(), TEXT("FootIK"));
 	pFootIK->RegisterComponent();
+
+	DamageCapsuleComponent =NewObject<UCapsuleComponent>(this, UCapsuleComponent::StaticClass(), TEXT("DamageCapsule"));
+	DamageCapsuleComponent->RegisterComponent();
+	DamageCapsuleComponent->SetGenerateOverlapEvents(true);
+	DamageCapsuleComponent->SetCapsuleSize(100.f,50.f);
+	DamageCapsuleComponent->ComponentTags.Add(FName(cap_tag::EnemyDmgCap));
+	DamageCapsuleComponent->SetHiddenInGame(false);
+	DamageCapsuleComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	DamageCapsuleComponent->SetCollisionProfileName(FName(TEXT("DamageCapsule")));
+	
+	DamageCapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AExploder::InitializeMeshComponent()
@@ -62,4 +96,14 @@ void AExploder::BreakBone()
 	GetMesh()->BreakConstraint(FVector::ZeroVector, FVector::ZeroVector, FName("SpiderBot_Abdomen"));
 
 	GetMesh()->SetSimulatePhysics(true);
+
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::RobotOff, GetWorld(),GetActorLocation(),ESoundAttenuationType::SOUND_LOUD, 0.5f);
+	}
+
+	if(Soundtimehandle.IsValid())
+		GetWorldTimerManager().ClearTimer(Soundtimehandle);
+
 }

@@ -27,6 +27,13 @@ void UTPSAnimInstance::PlayAnimMontage()
 {
 	if (nullptr == pCharacter) return;
 	auto WeaponType = pCharacter->GetWeaponType();
+
+	if (pCharacter->GetIsHit())
+	{
+		PlayHit();
+		return;
+	}
+
 	//비무장상태에서는 무기관련 몽타주 없음
 	if (pCharacter->GetIsEquiping())
 	{
@@ -95,6 +102,8 @@ void UTPSAnimInstance::InitMontage()
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Run_Pistol.TPS_Run_Pistol'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::RUN);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_Equip.TPS_Pistol_Equip'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::EQUIP);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Pistol_Melee.TPS_Pistol_Melee'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::MELEE);
+
+	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_hit.TPS_hit'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::HIT);
 
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Rifle_Idle.TPS_Rifle_Idle'"), EWeaponType::WEAPON_RIFLE, EWeaponMontageState::IDLE);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Rifle_Aim.TPS_Rifle_Aim'"), EWeaponType::WEAPON_RIFLE, EWeaponMontageState::AIM);
@@ -247,6 +256,18 @@ void UTPSAnimInstance::PlayMelee(EWeaponType weapontype)
 	}
 }
 
+void UTPSAnimInstance::PlayHit()
+{
+	auto pMontage = GetMontage(EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::HIT);
+	if (!Montage_IsPlaying(pMontage))
+	{
+		Montage_Play(pMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, true);
+		FOnMontageBlendingOutStarted BlendOutDele;
+		BlendOutDele.BindUObject(this, &UTPSAnimInstance::BlendOutHit);
+		Montage_SetBlendingOutDelegate(BlendOutDele);
+	}
+}
+
 void UTPSAnimInstance::BlendOutReload(class UAnimMontage*, bool interrupt)
 {
 	if (nullptr == pCharacter) return;
@@ -273,6 +294,12 @@ void UTPSAnimInstance::BlendOutMelee(class UAnimMontage*, bool interrupt)
 	if (nullptr == pCharacter) return;
 
 	pCharacter->SetAttacking(false);
+}
+
+void UTPSAnimInstance::BlendOutHit(class UAnimMontage*, bool interrupt)
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->SetHit(false);
 }
 
 void UTPSAnimInstance::AnimNotify_WeaponSet()

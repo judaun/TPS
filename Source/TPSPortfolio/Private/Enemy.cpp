@@ -15,6 +15,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/DamageEvents.h"
+#include "Components/PrimitiveComponent.h"
 
 
 // Sets default values
@@ -31,6 +32,8 @@ AEnemy::AEnemy(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
+	
+	fDissolve= 0.f;
 }
 
 // Called when the game starts or when spawned
@@ -38,6 +41,7 @@ void AEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	pM_Dynamic = GetMesh()->CreateDynamicMaterialInstance(0);
 }
 
 // Called every frame
@@ -46,6 +50,9 @@ void AEnemy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateState(DeltaTime);
+
+	if(bIsDissolve)
+		Dissolving(DeltaTime);
 }
 template< class T >
 void AEnemy::InitializeState(FString compname)
@@ -53,6 +60,17 @@ void AEnemy::InitializeState(FString compname)
 	T* elem = NewObject<T>(this, T::StaticClass(), *compname);
 	elem->RegisterComponent();
 	TA_State.Emplace(elem);
+}
+
+void AEnemy::Dissolving(float culvevalue)
+{
+	if (!IsValid(pM_Dynamic)) return;
+	if(fDissolve < 1.f)
+		fDissolve += culvevalue;
+	pM_Dynamic->SetScalarParameterValue(FName(TEXT("Dissolve")), fDissolve);
+
+	if(fDissolve >= 1.f)
+		Destroy();
 }
 
 void AEnemy::LockOnTarget(float deltatime)
@@ -103,6 +121,23 @@ void AEnemy::SetEnemyData(FEnemyTable* enemydata)
 	iCurHealth = EnemyData.Health;
 	GetCharacterMovement()->MaxWalkSpeed = EnemyData.Speed;
 
+}
+
+void AEnemy::DissolveMaterial()
+{
+	if(!GetWorldTimerManager().IsTimerActive(dissolvetimehandle))
+		GetWorldTimerManager().SetTimer(dissolvetimehandle, [this](){bIsDissolve = true;}, 5.f,false);
+}
+
+void AEnemy::DmgCapsuleActive(bool isactive, float timer)
+{
+	if(!IsValid(DamageCapsuleComponent)) return;
+	DamageCapsuleComponent->SetCollisionEnabled(isactive ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+
+	if (isactive&& !GetWorldTimerManager().IsTimerActive(FDmgcapsuletimehandle))
+	{
+		GetWorldTimerManager().SetTimer(FDmgcapsuletimehandle,[this](){DmgCapsuleActive(false);}, timer, false);
+	}
 }
 
 void AEnemy::BreakBone()

@@ -231,6 +231,7 @@ public:
 public:
 	float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+	void NotifyActorBeginOverlap(AActor* OtherActor) override;
 
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
@@ -246,6 +247,7 @@ public:
 	bool GetIsMoving() { return bIsMoving; }
 	bool GetIsSprint() {return bIsSprint;}
 	bool GetIsEquiping() { return bIsEquiping; }
+	bool GetIsHit() {return bIsHit;}
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
@@ -269,6 +271,7 @@ public:
 	void SetIsCrawl(bool crawl) { bIsCrawl = crawl; }
 	void PlayAttack(bool ismelee = false);
 	void SetCrawlEnd();
+	void SetHit(bool ishit) {bIsHit = ishit;}
 
 	FRotator GetFootRotator(bool left);
 
@@ -318,6 +321,7 @@ private:
 	bool bIsEvade;
 	bool bIsRagdoll;
 	bool bIsLayingOnBack;
+	bool bIsHit;
 	FVector vRagdollMeshLocation;
 
 	bool bIsCrawl;

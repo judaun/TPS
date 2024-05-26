@@ -17,8 +17,10 @@ class TPSPORTFOLIO_API AExploder : public AEnemy
 	AExploder(const FObjectInitializer& ObjectInitializer);
 //function///////////////////////////////////////
 private:
+	void ServoMotorSound();
 protected:
 	virtual void BeginPlay() override;
+	void Tick(float DeltaTime) override;
 	void InitializeDefaultComponent() override;
 	void InitializeMeshComponent() override;
 public:
@@ -29,6 +31,7 @@ public:
 	bool GetisAttacking() override { return bIsAttacking; }
 //value//////////////////////////////////////////
 private:
+	FTimerHandle Soundtimehandle;
 protected:
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Enemy, meta = (AllowPrivateAccess = "true"))

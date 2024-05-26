@@ -6,6 +6,7 @@
 #include "TPSGameInstance.h"
 #include "TPSEffectMng.h"
 #include "TPSCamaraMng.h"
+#include "TPSSoundManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Enemy.h"
@@ -31,6 +32,8 @@ void UDeadEnemyState::Explosion()
 		pInstance->SpawnEffect(Eff_key::DistortionBoom, GetWorld(), GetOwner()->GetActorLocation(), FRotator::ZeroRotator, FVector(2.f), true);
 		if (fShakeScale > 0.f)
 			pInstance->ClientCameraShake(shake_key::Boom_Small, GetWorld()->GetFirstPlayerController(), fShakeScale);
+	
+		pInstance->StartSoundLocation(sound_key::Boom1,GetWorld(), GetOwner()->GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
 	}
 
 
@@ -60,6 +63,7 @@ void UDeadEnemyState::Enter()
 		Explosion();
 	}
 	
+	pOwnerEnemy->DissolveMaterial();
 }
 
 void UDeadEnemyState::Exit()

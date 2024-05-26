@@ -11,6 +11,8 @@ class UNiagaraSystem;
 namespace Eff_key
 {
 	TCHAR* const DistortionBoom = TEXT("DistBoon");
+	TCHAR* const HitEffect = TEXT("HitEffect");
+	TCHAR* const BloodEffect = TEXT("BloodEffect");
 }
 
 UCLASS()

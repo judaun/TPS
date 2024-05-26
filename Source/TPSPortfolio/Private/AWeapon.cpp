@@ -12,6 +12,9 @@
 #include "Engine/DecalActor.h"
 #include "Components/DecalComponent.h"
 #include "TPSGameInstance.h"
+#include "TPSEffectMng.h"
+#include "TPSSoundManager.h"
+#include "Enemy.h"
 
 #define MAXIMUM_RECOIL_ANGLE 5
 
@@ -223,6 +226,8 @@ void AWeapon::AttackTrace()
 	if (iCurrentCapacity <= 0) return;
 	--iCurrentCapacity;
 
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+
 	//공격 인터벌 추가
 	fFireMenual += FEquipData.fBaseAttInterval / 1000.f;
 
@@ -256,16 +261,26 @@ void AWeapon::AttackTrace()
 		//DrawDebugLine(currentWorld, vfireStart, vfireEnd, FColor::Red, false, 0.3f);
 		if (currentWorld->LineTraceSingleByChannel(hitResult, vfireStart, vfireEnd, ECC_Visibility, collisionParams))
 		{
+			bool isEnemy = false;
 			if (hitResult.GetActor())
 			{
 				auto hitActor = hitResult.GetActor();
-
+				
+				if (hitActor->IsA(AEnemy::StaticClass()))
+				{
+					if(Cast<AEnemy>(hitActor)->GetHP() <= FEquipData.iBaseDmg)
+						pGameInstance->StartSoundLocation(sound_key::KillMark, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_MEDIUM, 1.f);
+					else
+						pGameInstance->StartSoundLocation(sound_key::HitMark, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_MEDIUM, 1.f);
+					isEnemy = true;
+				}
+					
 				FVector vHitDirection = (hitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 				UGameplayStatics::ApplyPointDamage(hitActor, FEquipData.iBaseDmg, vHitDirection, hitResult, pCharacter->GetController(),this,NULL);
 
 				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
 			}
-			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
+			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation(), isEnemy);
 		}
 
 		
@@ -294,7 +309,7 @@ void AWeapon::AttackTrace()
 		pMesh->PlayAnimation(pShotAnim, false);
 	}
 		
-	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	
 	FString strSoundName = FString::Printf(TEXT("%s_Shot"), *FEquipData.Name);
 	if (nullptr != pGameInstance) pGameInstance->StartSoundLocationRandomPitch(*strSoundName, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
 
@@ -407,14 +422,15 @@ void AWeapon::OnRecoilTimelineFinish()
 	//UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
 }
 
-void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator)
+void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator, bool isenemy)
 {
 	Rotator.Pitch += 90;
 
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (pGameInstance)
 	{
-		pGameInstance->SpawnEffect(TEXT("BulletHit"), GetWorld(), Location, Rotator, FVector(0.5f), true);
+		isenemy ? pGameInstance->SpawnEffect(Eff_key::HitEffect, GetWorld(), Location, Rotator, FVector(0.5f), true) 
+				: pGameInstance->SpawnEffect(TEXT("BulletHit"), GetWorld(), Location, Rotator, FVector(0.5f), true);
 		pGameInstance->SpawnDecal(TEXT("BulletHole"), GetWorld(), 5.f, Location, Rotator, FVector(4.f), 0.002f);
 	}
 }

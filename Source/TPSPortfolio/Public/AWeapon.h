@@ -31,7 +31,7 @@ private:
 	FString GetWeaponTypeName(EWeaponType weapontype);
 	void InitMagazineMesh();
 	void InitTimeLine();
-	void SetSpawnDecal(FVector Location, FRotator Rotator);
+	void SetSpawnDecal(FVector Location, FRotator Rotator, bool isenemy);
 protected:
 	virtual void BeginPlay() override;
 public:	

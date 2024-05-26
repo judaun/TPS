@@ -4,6 +4,9 @@
 #include "AttackEnemyState.h"
 #include "TPSEnum.h"
 #include "Enemy.h"
+#include "TPSGameInstance.h"
+#include "TPSSoundManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UAttackEnemyState::UAttackEnemyState()
@@ -62,6 +65,14 @@ void UAttackEnemyState::MeleeAttack()
 	pEnemy->GetCharacterMovement()->AddImpulse(vDirection* 800.f, true);
 
 	DrawDebugBox(GetWorld(), vTargetForeseeLoctaion, FVector(5.f), FColor::Red,false,3.f);
+
+	pEnemy->DmgCapsuleActive(true, 2.f);
+
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::MachineJump, GetWorld(),pEnemy->GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
+	}
 }
 
 void UAttackEnemyState::LongRangeAttack()

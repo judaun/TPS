@@ -29,6 +29,8 @@
 #include "Perception/AISense_Hearing.h"
 #include "TPSTag.h"
 #include "Engine/DamageEvents.h"
+#include "Enemy.h"
+#include "TPSEffectMng.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -172,8 +174,9 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
-	GetCapsuleComponent()->SetIsReplicated(true);
-	GetCapsuleComponent()->SetNetAddressable();
+	GetCapsuleComponent()->SetGenerateOverlapEvents(true);
+	GetCapsuleComponent()->SetHiddenInGame(false);
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -219,8 +222,8 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 	FName WeaponSocket(TEXT("r_hand_rifle"));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(0));
-	//WeaponSlot.Emplace(pInventory->LoadWeapon(1));
-	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
+	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
+	//WeaponSlot.Emplace(pInventory->LoadWeapon(2));
 	
 	for (auto elem : WeaponSlot)
 	{
@@ -300,10 +303,12 @@ float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const
 {
 	float fDmg = Super::TakeDamage(Damage,DamageEvent,EventInstigator,DamageCauser);
 
+
 	//포인트 데미지
 	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
 	{
 
+		
 	}
 	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
 	{
@@ -321,13 +326,14 @@ float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const
 
 		AddMovementInput(FVector::UpVector, 10.f);
 		GetCharacterMovement()->AddImpulse(vDirection * (fDmg / 4.f), true);
-		
-
+	
 	}
 
 	iCurHealth -= ceil(fDmg);
 	if(iCurHealth <= 0)
 		Ragdoll();
+
+	SetHit(true);
 
 	return fDmg;
 }
@@ -346,6 +352,37 @@ void ATPSPortfolioCharacter::NotifyHit(class UPrimitiveComponent* MyComp, AActor
 		}
 	}
 }
+
+void ATPSPortfolioCharacter::NotifyActorBeginOverlap(AActor* OtherActor)
+{
+	Super::NotifyActorBeginOverlap(OtherActor);
+	UE_LOG(LogTemp, Log, TEXT("OnOverlapActor"));
+	if (IsValid(OtherActor))
+	{
+		if (OtherActor->IsA(AEnemy::StaticClass()))
+		{
+			AEnemy* pEnemy = Cast<AEnemy>(OtherActor);
+			int32 iDmg = pEnemy->GetDmg();
+			UGameplayStatics::ApplyDamage(this,iDmg, pEnemy->GetController(),OtherActor, NULL);
+			
+			FVector vSrc = pEnemy->GetActorLocation();
+			FVector vDst = GetActorLocation();
+
+			FVector vDirect = (vDst - vSrc).GetSafeNormal();
+			vDirect.Z = 0.3;
+			GetCharacterMovement()->AddImpulse(vDirect* 100.f,true);
+
+			pEnemy->DmgCapsuleActive(false);
+
+			UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+			if (pInstance)
+			{
+				pInstance->SpawnEffect(Eff_key::BloodEffect, GetWorld(), vDst - vDirect*50.f, vDirect.Rotation());
+			}
+		}
+	}
+}
+
 
 FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
 {
