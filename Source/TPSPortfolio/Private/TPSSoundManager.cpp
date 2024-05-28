@@ -104,6 +104,9 @@ void ATPSSoundManager::InitSound()
 	AddSound(sound_key::Servo2, TEXT("/Script/Engine.SoundWave'/Game/Sounds/servo2.servo2'"));
 	AddSound(sound_key::RobotOff, TEXT("/Script/Engine.SoundWave'/Game/Sounds/RobotOff.RobotOff'"));
 	AddSound(sound_key::MachineJump, TEXT("/Script/Engine.SoundWave'/Game/Sounds/machinejump.machinejump'"));
+	AddSound(sound_key::Hurt1, TEXT("/Script/Engine.SoundWave'/Game/Sounds/hurt.hurt'"));
+
+	
 	//
 	///Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'
 	AddSound(TEXT("FootStep_Ground_1"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_1.ground_1'"));

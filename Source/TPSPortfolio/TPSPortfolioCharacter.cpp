@@ -19,6 +19,7 @@
 #include "EvadeCharacterState.h"
 #include "CrossHair.h"
 #include "CharacterHUD.h"
+#include "HitDirection.h"
 #include "AWeapon.h"
 #include "TPSAnimInstance.h"
 #include "C_FootIK.h"
@@ -31,6 +32,8 @@
 #include "Engine/DamageEvents.h"
 #include "Enemy.h"
 #include "TPSEffectMng.h"
+#include "CalculationFunction.h"
+#include "TPSSoundManager.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -49,6 +52,7 @@ ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
 	vecState.clear();
 	func_Player_Bullet.Clear();
 	func_Player_Aimrate.Clear();
+	func_Player_HP.Clear();
 	func_Player_Magazine.Unbind();
 	WeaponSlot.Reset();
 
@@ -167,6 +171,7 @@ void ATPSPortfolioCharacter::InitializeMeshComponent()
 		GetMesh()->SetPhysicsAsset(FObj_Physics.Object);
 		GetMesh()->SetSimulatePhysics(true);
 		GetMesh()->SetCollisionProfileName(TEXT("TPSCharacter"));
+		GetMesh()->SetGenerateOverlapEvents(true);
 	}
 }
 
@@ -174,7 +179,7 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
-	GetCapsuleComponent()->SetGenerateOverlapEvents(true);
+	//GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 	GetCapsuleComponent()->SetHiddenInGame(false);
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
@@ -253,6 +258,8 @@ void ATPSPortfolioCharacter::BeginPlay()
 		{
 			Cast<UCharacterHUD>(TPSController->CharacterHUDWidget)->BindUserData(this);
 		}
+		if(IsValid(TPSController->DamagedHUDWidget))
+			Cast<UHitDirection>(TPSController->DamagedHUDWidget)->BindUserData(this);
 	}
 
 	if (func_Player_Aimrate.IsBound())
@@ -303,10 +310,11 @@ float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const
 {
 	float fDmg = Super::TakeDamage(Damage,DamageEvent,EventInstigator,DamageCauser);
 
-
+	
 	//포인트 데미지
 	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
 	{
+		const FPointDamageEvent* RadialDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
 
 		
 	}
@@ -330,10 +338,37 @@ float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const
 	}
 
 	iCurHealth -= ceil(fDmg);
+
+	if(func_Player_HP.IsBound())
+		func_Player_HP.Broadcast(float(iCurHealth) / iMaxHealth);
+
 	if(iCurHealth <= 0)
 		Ragdoll();
 
 	SetHit(true);
+
+	FVector vMyActor = GetActorLocation();
+	FVector vCauserActor = DamageCauser->GetActorLocation();
+	FVector vHitDirection = (DamageCauser->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->SpawnEffect(Eff_key::BloodEffect, GetWorld(), vMyActor + vHitDirection * 50.f, vHitDirection.Rotation());
+		pInstance->StartSoundLocation(sound_key::Hurt1,GetWorld(),vMyActor,ESoundAttenuationType::SOUND_SILENCE);
+	}
+
+	if (ATPSPlayerController* TPSController = Cast<ATPSPlayerController>(Controller))
+	{
+		//degree -180 ~ 180
+		//fowardvector 기준으로
+		FVector vControll = GetControlVector(true);
+		vControll.Z = 0.f;
+		vHitDirection.Z = 0.f;
+		float fHitDegree = CalculateDegree(vControll, vHitDirection);
+		
+		TPSController->SetAngleHitUI(fHitDegree);
+	}
 
 	return fDmg;
 }
@@ -373,12 +408,6 @@ void ATPSPortfolioCharacter::NotifyActorBeginOverlap(AActor* OtherActor)
 			GetCharacterMovement()->AddImpulse(vDirect* 100.f,true);
 
 			pEnemy->DmgCapsuleActive(false);
-
-			UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-			if (pInstance)
-			{
-				pInstance->SpawnEffect(Eff_key::BloodEffect, GetWorld(), vDst - vDirect*50.f, vDirect.Rotation());
-			}
 		}
 	}
 }

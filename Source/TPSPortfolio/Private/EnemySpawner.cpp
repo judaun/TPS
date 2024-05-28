@@ -22,7 +22,15 @@ void AEnemySpawner::BeginPlay()
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (pGameInstance)
 	{
-		pGameInstance->SpawnEnemy(EnemyKey::ENEMY_EXPLODER, GetWorld(), GetActorLocation(), GetActorRotation());
+		int32 iSpawnKey = 1;
+		switch (eType)
+		{
+			case EEnemyType::ENEMY_ASSAULT : iSpawnKey = EnemyKey::ENEMY_EXPLODER;
+			break;
+			case EEnemyType::ENEMY_SCOUT : iSpawnKey = EnemyKey::ENEMY_SCOUTER;
+			break;
+		}
+		pGameInstance->SpawnEnemy(iSpawnKey, GetWorld(), GetActorLocation(), GetActorRotation());
 	}
 }
 

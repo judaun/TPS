@@ -29,6 +29,8 @@ AEnemy::AEnemy(const FObjectInitializer& ObjectInitializer)
 	GetCapsuleComponent()->SetCollisionProfileName(FName("Enemy"));
 	GetCharacterMovement()->RotationRate.Yaw = 180.f;
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	GetCharacterMovement()->InitialPushForceFactor = 100.f;
+	GetCharacterMovement()->PushForceFactor = 100.f;
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;

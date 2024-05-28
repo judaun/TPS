@@ -4,6 +4,7 @@
 #include "TPSPlayerController.h"
 
 #include "Blueprint/UserWidget.h"
+#include "HitDirection.h"
 
 ATPSPlayerController::ATPSPlayerController()
 {
@@ -18,12 +19,24 @@ ATPSPlayerController::ATPSPlayerController()
 
 	if (FCL_HUDCharacter.Succeeded())
 		CharacterHUDWidgetClass = FCL_HUDCharacter.Class;
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> FCL_HUDDamage(TEXT("/Script/UMGEditor.WidgetBlueprint'/Game/UI/UI_HitDirection.UI_HitDirection_C'"));
+	if(FCL_HUDDamage.Succeeded())
+		DamagedHUDWidgetClass = FCL_HUDDamage.Class;
 }
 
 ATPSPlayerController::~ATPSPlayerController()
 {
 
 }
+
+void ATPSPlayerController::SetAngleHitUI(float angle)
+{
+	if(!IsValid(DamagedHUDWidget)) return;
+
+	Cast<UHitDirection>(DamagedHUDWidget)->SetActive(angle);
+}
+
 
 void ATPSPlayerController::BeginPlay()
 {
@@ -51,9 +64,16 @@ void ATPSPlayerController::BeginPlay()
 		CharacterHUDWidget = CreateWidget(GetWorld(), CharacterHUDWidgetClass);
 		if (IsValid(CrossHairHUDWidget))
 		{
-			CharacterHUDWidget->SetDesiredSizeInViewport(FVector2D(528.f, 141.f));
-			CharacterHUDWidget->SetPositionInViewport(FVector2D(0.f, ScreenSize.Y- 141.f));
 			CharacterHUDWidget->AddToViewport();
+		}
+	}
+
+	if (IsValid(DamagedHUDWidgetClass))
+	{
+		DamagedHUDWidget = CreateWidget(GetWorld(), DamagedHUDWidgetClass);
+		if (IsValid(DamagedHUDWidget))
+		{
+			DamagedHUDWidget->AddToViewport();
 		}
 	}
 }

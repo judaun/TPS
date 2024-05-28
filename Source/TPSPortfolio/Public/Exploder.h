@@ -15,6 +15,7 @@ class TPSPORTFOLIO_API AExploder : public AEnemy
 	GENERATED_BODY()
 
 	AExploder(const FObjectInitializer& ObjectInitializer);
+
 //function///////////////////////////////////////
 private:
 	void ServoMotorSound();

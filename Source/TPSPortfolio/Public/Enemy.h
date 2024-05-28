@@ -52,6 +52,7 @@ public:
 	/* EnemyState 기능 갱신 */
 	void UpdateState(float deltatime);
 
+	virtual void ActiveEffect(FVector direction){}
 	int32 GetDmg() {
 		return EnemyData.Damage;}
 	int32 GetHP() {return iCurHealth;}

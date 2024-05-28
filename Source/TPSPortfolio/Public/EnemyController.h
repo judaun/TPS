@@ -19,6 +19,7 @@ namespace bb_key
 	TCHAR* const PatrolLocation = TEXT("PatrolLocation");
 	TCHAR* const EnemyState = TEXT("EnemyState");
 	TCHAR* const IsAttack = TEXT("IsAttack");
+	TCHAR* const IsLongRange = TEXT("IsLongRange");
 }
 
 UCLASS()
@@ -38,6 +39,7 @@ public:
 	/* AEnemy의 State가 변경됬을때 Blackboard에 값을 넣어주기 위한 함수 */
 	void ChangeEnemyState(EEnemyState estate);
 	void ChangeAttackBlackBoard(bool attacking);
+	void ChangeLongRange(bool longrange);
 
 	UFUNCTION()
 		void OnTargetDetected(AActor* actor, FAIStimulus const stimulus);

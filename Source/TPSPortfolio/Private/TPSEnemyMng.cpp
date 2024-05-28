@@ -5,6 +5,7 @@
 #include "TPSEnum.h"
 #include "Enemy.h"
 #include "Exploder.h"
+#include "Scouter.h"
 
 // Sets default values
 ATPSEnemyMng::ATPSEnemyMng()
@@ -38,7 +39,7 @@ void ATPSEnemyMng::Tick(float DeltaTime)
 
 }
 
-void ATPSEnemyMng::SpawnEnemy(int32 key, const UWorld* world, FVector location, FRotator rotator)
+void ATPSEnemyMng::SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator)
 {
 	FTransform SpawnTransform(rotator, location);
 	AEnemy* pEmeny = nullptr;
@@ -46,15 +47,16 @@ void ATPSEnemyMng::SpawnEnemy(int32 key, const UWorld* world, FVector location, 
 
 	switch (key)
 	{
-		case EnemyKey::ENEMY_EXPLODER :
-			pEmeny = world->GetWorld()->SpawnActorDeferred<AExploder>(AExploder::StaticClass(), SpawnTransform);
-			pEnemyData = GetEnemyData(key);
+		case EnemyKey::ENEMY_EXPLODER : pEmeny = world->SpawnActorDeferred<AExploder>(AExploder::StaticClass(), SpawnTransform);
 		break;
-
+		case EnemyKey::ENEMY_SCOUTER : pEmeny = world->SpawnActorDeferred<AScouter>(AScouter::StaticClass(), SpawnTransform);
+		break;
+		
 		default:
 		break;
 	 }
 
+	pEnemyData = GetEnemyData(key);
 	if (pEmeny && pEnemyData)
 	{
 		pEmeny->SetEnemyData(pEnemyData);

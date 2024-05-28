@@ -8,10 +8,12 @@
 #include "TPSSoundManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "TPSPortfolioCharacter.h"
 
 UAttackEnemyState::UAttackEnemyState()
 {
 	eStatetype = EEnemyState::ATTACK;
+	bIsTraced = false;
 }
 
 void UAttackEnemyState::Turn(float deltatime)
@@ -77,13 +79,71 @@ void UAttackEnemyState::MeleeAttack()
 
 void UAttackEnemyState::LongRangeAttack()
 {
-	
+	if (!IsValid(GetOwner()) || !bIsTraced) return;
+	AEnemy* pEnemy = Cast<AEnemy>(GetOwner());
+	auto pMesh = pEnemy->GetMesh();
+	if (!IsValid(pMesh)) return;
+	//Å¸°Ù
+	FVector vTargetPos = vTargetForeseeLoctaion;
+	FVector vMyPos = pMesh->GetSocketLocation(FName(TEXT("Muzzle")));
+	FVector vDirection = (vTargetPos - vMyPos).GetSafeNormal();
+
+	pEnemy->SetisAttacking(true);
+
+	float fRandPitch = float(rand() % 500) / 100.f; // 0~9.99.f
+	float fRandYaw = float(rand() % 500) / 100.f; // 0~9.99.f
+	bool IsEvenPitch = rand() % 2 == 0;
+	bool IsEvenYaw = rand() % 2 == 0;
+
+	vDirection = vDirection.RotateAngleAxis(IsEvenPitch ? fRandPitch : -fRandPitch, pEnemy->GetActorRightVector());
+	vDirection = vDirection.RotateAngleAxis(IsEvenYaw ? fRandYaw : -fRandYaw, pEnemy->GetActorUpVector());
+
+	//
+	pEnemy->ActiveEffect(vDirection);
+}
+
+void UAttackEnemyState::LongRangeTrace()
+{
+	if (!IsValid(GetOwner())) return;
+	AEnemy* pEnemy = Cast<AEnemy>(GetOwner());
+	auto EnemyData = pEnemy->GetEnemyData();
+	if(EnemyData.ProjectileDamage <= 0.f) return;
+	auto pMesh = pEnemy->GetMesh();
+	if (!IsValid(pMesh)) return;
+
+	//Å¸°Ù
+	FVector vTargetPos = pEnemy->GetTargetActorPos();
+	FVector vMyPos = pMesh->GetSocketLocation(FName(TEXT("Muzzle")));
+	FVector vDirection = (vTargetPos - vMyPos).GetSafeNormal();
+
+	FHitResult hitResult;
+
+	TArray<AActor*> vecIgnore;
+	vecIgnore.Add(pEnemy);
+
+	if (UKismetSystemLibrary::LineTraceSingle(GetWorld(), vMyPos, vMyPos + vDirection * EnemyData.DetectLength,
+		UEngineTypes::ConvertToTraceType(ECC_WorldDynamic), true, vecIgnore, EDrawDebugTrace::ForOneFrame, hitResult, true))
+	{
+		if (hitResult.GetActor())
+		{
+			auto hitActor = hitResult.GetActor();
+			if (hitActor->IsA(ATPSPortfolioCharacter::StaticClass()))
+			{
+				bIsTraced = true;
+				return;
+			}
+		}
+	}
+
+
+	bIsTraced = false;
 }
 
 void UAttackEnemyState::Process(float deltatime)
 {
 	Turn(deltatime);
 	Attack(deltatime);
+	LongRangeTrace();
 }
 
 void UAttackEnemyState::Enter()

@@ -10,6 +10,7 @@
 namespace EnemyKey
 {
 	int32 const ENEMY_EXPLODER = 1;
+	int32 const ENEMY_SCOUTER = 2;
 }
 
 UCLASS()
@@ -29,7 +30,7 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 
-	void SpawnEnemy(int32 key, const UWorld* world, FVector location, FRotator rotator);
+	void SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator);
 	FEnemyTable* GetEnemyData(int32 key);
 //value///////////////////////////////////////////////
 private:

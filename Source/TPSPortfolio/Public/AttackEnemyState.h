@@ -21,6 +21,7 @@ private:
 	void Attack(float deltatime);
 	void MeleeAttack();
 	void LongRangeAttack();
+	void LongRangeTrace();
 protected:
 public:
 	void Process(float deltatime) override;
@@ -32,4 +33,6 @@ private:
 	FTimerHandle Firetimehandle;
 	FVector vTargetSrcPos;
 	FVector vTargetForeseeLoctaion;
+
+	bool bIsTraced;
 };

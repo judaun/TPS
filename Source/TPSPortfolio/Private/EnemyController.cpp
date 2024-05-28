@@ -114,6 +114,12 @@ void AEnemyController::ChangeAttackBlackBoard(bool attacking)
 	BTcomp->SetValueAsBool(bb_key::IsAttack, attacking);
 }
 
+void AEnemyController::ChangeLongRange(bool longrange)
+{
+	UBlackboardComponent* BTcomp = Blackboard.Get();
+	BTcomp->SetValueAsBool(bb_key::IsLongRange, longrange);
+}
+
 void AEnemyController::OnTargetDetected(AActor* actor, FAIStimulus const stimulus)
 {
 	APawn* pCurPawn = GetPawn();
@@ -139,10 +145,10 @@ void AEnemyController::OnTargetDetected(AActor* actor, FAIStimulus const stimulu
 		if (stimulus.Type == pSenceConfig->GetSenseID())
 		{
 			/* 시야 탐지를 소실했을때 현재 대상 엑터의 위치를 탐지 지역으로 추가해주어 한번 더 추적 */
-			BTcomp->ClearValue(bb_key::TargetActor);
+			/*BTcomp->ClearValue(bb_key::TargetActor);
 			pEnemy->ClearTarget();
 			if(IsValid(actor))
-			BTcomp->SetValueAsVector(bb_key::TargetLocation, actor->GetActorLocation());
+			BTcomp->SetValueAsVector(bb_key::TargetLocation, actor->GetActorLocation());*/
 		}
 		else if (stimulus.Type == pSenceConfig_Hear->GetSenseID())
 		{

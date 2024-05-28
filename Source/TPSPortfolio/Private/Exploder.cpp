@@ -15,8 +15,10 @@ AExploder::AExploder(const FObjectInitializer& ObjectInitializer)
 	bIsAttacking = false;
 }
 
+
 void AExploder::ServoMotorSound()
 {
+	if (!IsValid(this)) return;
 
 	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (pInstance)
@@ -32,6 +34,8 @@ void AExploder::BeginPlay()
 
 	if(!GetWorldTimerManager().IsTimerActive(Soundtimehandle))
 		GetWorldTimerManager().SetTimer(Soundtimehandle, [this](){ServoMotorSound();},3.f, true);
+
+	GetCapsuleComponent()->SetMassOverrideInKg(NAME_None, 1000.f);
 }
 
 void AExploder::Tick(float DeltaTime)
@@ -74,6 +78,7 @@ void AExploder::InitializeMeshComponent()
 	{
 		GetMesh()->SetSkeletalMesh(pMesh);
 		GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -45.f), FRotator(0.f, -90.f, 0.f));
+		GetMesh()->SetCollisionProfileName(FName(TEXT("Enemy")));
 		if(pAnimclass)GetMesh()->SetAnimInstanceClass(pAnimclass);
 	}
 }
@@ -105,5 +110,4 @@ void AExploder::BreakBone()
 
 	if(Soundtimehandle.IsValid())
 		GetWorldTimerManager().ClearTimer(Soundtimehandle);
-
 }

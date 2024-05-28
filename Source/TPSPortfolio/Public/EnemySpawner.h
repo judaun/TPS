@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "EnemySpawner.generated.h"
 
+enum class EEnemyType : uint8;
+
 UCLASS()
 class TPSPORTFOLIO_API AEnemySpawner : public AActor
 {
@@ -23,4 +25,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere)
+	TEnumAsByte<EEnemyType> eType;
 };
