@@ -14,6 +14,7 @@
 #include "Projectile.h"
 #include "EnemyController.h"
 #include "TPSCamaraMng.h"
+#include "SquadComponent.h"
 
 AScouter::AScouter(const FObjectInitializer& ObjectInitializer)
 :Super(ObjectInitializer)
@@ -63,6 +64,9 @@ void AScouter::InitializeDefaultComponent()
 	pQuadFoot->SetLegData(false, true, FName("Bone012"), FName("SocketRF"));//RF
 	pQuadFoot->SetLegData(true, false, FName("Bone004"), FName("SocketLB"));//LB
 	pQuadFoot->SetLegData(false, false, FName("Bone008"), FName("SocketRB"));//RB
+
+	pSquadComponent = NewObject<USquadComponent>(this, USquadComponent::StaticClass(), TEXT("SquadComponent"));
+	pSquadComponent->RegisterComponent();
 }
 
 void AScouter::InitializeMeshComponent()
@@ -149,5 +153,6 @@ void AScouter::ActiveEffect(FVector direction)
 	{
 		if (fShakeScale > 0.f)
 			pInstance->ClientCameraShake(shake_key::Boom_Small, GetWorld()->GetFirstPlayerController(), fShakeScale);
+		pInstance->StartSoundLocation(sound_key::Cannon, GetWorld(), vSrc,ESoundAttenuationType::SOUND_LOUD, 0.8f);
 	}
 }

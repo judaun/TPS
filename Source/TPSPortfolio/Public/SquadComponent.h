@@ -6,23 +6,37 @@
 #include "Components/ActorComponent.h"
 #include "SquadComponent.generated.h"
 
+struct stSquadPos 
+{
+	TWeakObjectPtr<class AEnemy> pPosOwner;
+	FVector vOffset;
+};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class TPSPORTFOLIO_API USquadComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
 	USquadComponent();
-
+//func///////////////////////////////////////////////////////////
+private:
+	bool IsEmptySquadPos();
+	bool SetSquadPos(AActor* pactor);
+	void UpdateSquadPos();
+	bool IsMySquad(AActor* pactor);
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
-
 public:	
-	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	void FindSquadMember();
+//value//////////////////////////////////////////////////////////
+private:
+	TArray<stSquadPos> ta_Squad;
+
+	UPROPERTY()
+	FTimerHandle FindSquadTimehandle;
+protected:
+public:
 		
 };

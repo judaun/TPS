@@ -4,6 +4,8 @@
 #include "Projectile.h"
 #include "TPSPortfolioCharacter.h"
 #include "Enemy.h"
+#include "TPSGameInstance.h"
+#include "TPSSoundManager.h"
 
 // Sets default values
 AProjectile::AProjectile()
@@ -31,6 +33,18 @@ void AProjectile::InitializeMesh()
 
 }
 
+void AProjectile::DestroyProjectile()
+{
+	if (!IsValid(this)) return;
+
+	Destroy();
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::ImpactGround, GetWorld(),GetActorLocation(),ESoundAttenuationType::SOUND_LOUD, 0.5f);
+	}
+}
+
 // Called when the game starts or when spawned
 void AProjectile::BeginPlay()
 {
@@ -41,8 +55,7 @@ void AProjectile::BeginPlay()
 void AProjectile::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
 	Super::NotifyHit(MyComp,Other,OtherComp,bSelfMoved,HitLocation,HitNormal,NormalImpulse,Hit);
-	if (IsValid(this))
-		Destroy();
+	DestroyProjectile();
 }
 
 void AProjectile::NotifyActorBeginOverlap(AActor* OtherActor)
@@ -52,8 +65,7 @@ void AProjectile::NotifyActorBeginOverlap(AActor* OtherActor)
 	if(IsValid(OtherActor) && OtherActor->IsA(ATPSPortfolioCharacter::StaticClass()) && nullptr != pOwner)
 	UGameplayStatics::ApplyDamage(OtherActor, iDmg, pOwner->GetInstigatorController(), pOwner.Get(), nullptr);
 
-	if (IsValid(this))
-		Destroy();
+	DestroyProjectile();
 }
 
 // Called every frame
@@ -68,8 +80,7 @@ void AProjectile::Tick(float DeltaTime)
 	{
 		if (Result.GetActor())
 		{
-			if(IsValid(this))
-				Destroy();
+			DestroyProjectile();
 			//UE_LOG(LogTemp, Log, TEXT("%s"), *Result.GetActor()->GetName());
 		}
 	}

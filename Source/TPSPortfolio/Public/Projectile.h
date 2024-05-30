@@ -17,6 +17,7 @@ public:
 //function//////////////////////////////////////////////
 private:
 	void InitializeMesh();
+	void DestroyProjectile();
 protected:
 	virtual void BeginPlay() override;
 	void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;

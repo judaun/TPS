@@ -36,6 +36,7 @@ AEnemy::AEnemy(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationRoll = false;
 	
 	fDissolve= 0.f;
+	vSquadPos = FVector::ZeroVector;
 }
 
 // Called when the game starts or when spawned
@@ -193,6 +194,19 @@ void AEnemy::UpdateState(float deltatime)
 {
 	if(nullptr == wpCurState || !wpCurState.Get()) return;
 	wpCurState->Process(deltatime);
+}
+
+EEnemyState AEnemy::GetEnemyState()
+{
+	if (nullptr == wpCurState || !wpCurState.Get()) return EEnemyState::IDLE;
+	return wpCurState->GetState();
+}
+
+void AEnemy::SetSquadPos(FVector squadpos)
+{
+	if(!IsValid(this)) return;
+	vSquadPos = squadpos;
+	
 }
 
 float AEnemy::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

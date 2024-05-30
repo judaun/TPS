@@ -51,6 +51,9 @@ public:
 	void ChangeState(EEnemyState changestate);
 	/* EnemyState 기능 갱신 */
 	void UpdateState(float deltatime);
+	
+	EEnemyState GetEnemyState();
+	void SetSquadPos(FVector squadpos);
 
 	virtual void ActiveEffect(FVector direction){}
 	int32 GetDmg() {
@@ -60,6 +63,10 @@ public:
 	float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	virtual bool GetisAttacking() { return bIsAttacking; }
 	virtual void SetisAttacking(bool attacking);
+
+	UFUNCTION(BlueprintCallable, Category = Enemy)
+	FVector GetSquadLocation() {return vSquadPos;}
+
 //value/////////////////////////////////////////////////////
 private:
 	UPROPERTY()
@@ -73,6 +80,8 @@ private:
 	FTimerHandle dissolvetimehandle;
 
 	FTimerHandle FDmgcapsuletimehandle;
+
+	FVector vSquadPos;
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<AActor> wpTargetActor;

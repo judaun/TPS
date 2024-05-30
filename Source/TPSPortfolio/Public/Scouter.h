@@ -37,6 +37,8 @@ protected:
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Enemy,meta= (AllowPrivateAccess = "true"))
 	class UActorComponent* pFootIK;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Enemy, meta = (AllowPrivateAccess = "true"))
+	class UActorComponent* pSquadComponent;
 
 	UPROPERTY(EditAnywhere, Category = "Firing")
 	class UNiagaraComponent* pNiagaraCom;

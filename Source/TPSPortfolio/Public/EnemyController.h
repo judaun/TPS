@@ -40,6 +40,7 @@ public:
 	void ChangeEnemyState(EEnemyState estate);
 	void ChangeAttackBlackBoard(bool attacking);
 	void ChangeLongRange(bool longrange);
+	void SetPatrolPos(FVector patrolpos);
 
 	UFUNCTION()
 		void OnTargetDetected(AActor* actor, FAIStimulus const stimulus);

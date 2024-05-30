@@ -19,6 +19,8 @@ namespace sound_key
 	TCHAR* const RobotOff = TEXT("RobotOff");
 	TCHAR* const MachineJump = TEXT("MachineJump");
 	TCHAR* const Hurt1 = TEXT("Hurt1");
+	TCHAR* const Cannon = TEXT("Cannon");
+	TCHAR* const ImpactGround = TEXT("ImpactGround");
 }
 
 UCLASS()

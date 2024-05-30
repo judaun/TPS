@@ -181,6 +181,7 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
 	//GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 	GetCapsuleComponent()->SetHiddenInGame(false);
+	GetCapsuleComponent()->SetGenerateOverlapEvents(false);
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));

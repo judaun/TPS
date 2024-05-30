@@ -120,6 +120,12 @@ void AEnemyController::ChangeLongRange(bool longrange)
 	BTcomp->SetValueAsBool(bb_key::IsLongRange, longrange);
 }
 
+void AEnemyController::SetPatrolPos(FVector patrolpos)
+{
+	UBlackboardComponent* BTcomp = Blackboard.Get();
+	BTcomp->SetValueAsVector(bb_key::PatrolLocation, patrolpos);
+}
+
 void AEnemyController::OnTargetDetected(AActor* actor, FAIStimulus const stimulus)
 {
 	APawn* pCurPawn = GetPawn();
