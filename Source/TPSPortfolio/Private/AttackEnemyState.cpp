@@ -122,7 +122,7 @@ void UAttackEnemyState::LongRangeTrace()
 	vecIgnore.Add(pEnemy);
 
 	if (UKismetSystemLibrary::LineTraceSingle(GetWorld(), vMyPos, vMyPos + vDirection * EnemyData.DetectLength,
-		UEngineTypes::ConvertToTraceType(ECC_WorldDynamic), true, vecIgnore, EDrawDebugTrace::ForOneFrame, hitResult, true))
+		UEngineTypes::ConvertToTraceType(ECC_WorldDynamic), true, vecIgnore, EDrawDebugTrace::None, hitResult, true))
 	{
 		if (hitResult.GetActor())
 		{

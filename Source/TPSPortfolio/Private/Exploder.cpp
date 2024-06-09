@@ -51,7 +51,7 @@ void AExploder::InitializeDefaultComponent()
 	
 	GetCapsuleComponent()->SetCapsuleSize(40.f, 40.0f);
 
-	GetCapsuleComponent()->SetHiddenInGame(false);
+	//GetCapsuleComponent()->SetHiddenInGame(false);
 	pFootIK = NewObject<UQuadFootIK>(this, UQuadFootIK::StaticClass(), TEXT("FootIK"));
 	pFootIK->RegisterComponent();
 

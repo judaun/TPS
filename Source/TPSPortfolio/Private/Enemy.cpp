@@ -16,7 +16,8 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/DamageEvents.h"
 #include "Components/PrimitiveComponent.h"
-
+#include "PaperSprite.h"
+#include "PaperSpriteComponent.h"
 
 // Sets default values
 AEnemy::AEnemy(const FObjectInitializer& ObjectInitializer)
@@ -45,6 +46,8 @@ void AEnemy::BeginPlay()
 	Super::BeginPlay();
 	
 	pM_Dynamic = GetMesh()->CreateDynamicMaterialInstance(0);
+
+
 }
 
 // Called every frame
@@ -101,6 +104,23 @@ void AEnemy::InitializeDefaultComponent()
 	InitializeState<UDeadEnemyState>(TEXT("DeadState"));
 
 	wpCurState = TA_State[0];
+
+	MinimapSprite = NewObject<UPaperSpriteComponent>(this, UPaperSpriteComponent::StaticClass(), TEXT("MinimapSprite"));
+	pMarkSprite = Cast<UPaperSprite>(StaticLoadObject(UPaperSprite::StaticClass(), NULL, TEXT("/Script/Paper2D.PaperSprite'/Game/UI/Textures/EnemyMark_Sprite.EnemyMark_Sprite'")));
+
+	if (IsValid(MinimapSprite))
+	{
+		MinimapSprite->RegisterComponent();
+		MinimapSprite->SetWorldLocation(FVector(0.f, 0.f, 300.f));
+		MinimapSprite->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform, NAME_None);
+		MinimapSprite->SetWorldRotation(FRotator::MakeFromEuler(FVector(90.f, 0.f, 0.f)));
+		MinimapSprite->SetWorldScale3D(FVector(0.5f));
+		
+		MinimapSprite->bVisibleInSceneCaptureOnly = true;
+
+		if (IsValid(pMarkSprite))
+			MinimapSprite->SetSprite(pMarkSprite);
+	}
 }
 
 void AEnemy::InitializeMeshComponent()
@@ -207,6 +227,17 @@ void AEnemy::SetSquadPos(FVector squadpos)
 	if(!IsValid(this)) return;
 	vSquadPos = squadpos;
 	
+}
+
+void AEnemy::SetSquad(AEnemy* squadleader)
+{
+	if (nullptr == squadleader)
+	{
+		SquadLeader = nullptr;
+		return;
+	}
+	
+	SquadLeader = TWeakObjectPtr<AEnemy>(squadleader);
 }
 
 float AEnemy::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

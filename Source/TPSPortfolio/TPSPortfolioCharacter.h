@@ -111,6 +111,18 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	class UAIPerceptionStimuliSourceComponent* pStimuliSource;
 
+	/*UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
+	class UActorComponent* pMinimap;*/
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class USpringArmComponent* MinimapCameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class USceneCaptureComponent2D* MinimapCapture;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class UPaperSpriteComponent* MinimapSprite;
+
 #pragma endregion
 
 public:

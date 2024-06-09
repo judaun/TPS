@@ -34,6 +34,10 @@
 #include "TPSEffectMng.h"
 #include "CalculationFunction.h"
 #include "TPSSoundManager.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "PaperSpriteComponent.h"
+#include "Engine/CanvasRenderTarget2D.h"
+#include "PaperSprite.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -180,7 +184,7 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
 	//GetCapsuleComponent()->SetGenerateOverlapEvents(true);
-	GetCapsuleComponent()->SetHiddenInGame(false);
+	//GetCapsuleComponent()->SetHiddenInGame(false);
 	GetCapsuleComponent()->SetGenerateOverlapEvents(false);
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
@@ -201,6 +205,45 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 
 	pStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("PerceptionStimuli"));
 	pStimuliSource->bAutoRegister = true;
+
+	#pragma region MinimapCameraSpringArm
+	MinimapCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	MinimapCameraBoom->SetupAttachment(RootComponent);
+	MinimapCameraBoom->SetWorldRotation(FRotator::MakeFromEuler(FVector(0.f, -90.f, 0.f)));
+	MinimapCameraBoom->bUsePawnControlRotation = false;
+	MinimapCameraBoom->bInheritPitch = false;
+	MinimapCameraBoom->bInheritRoll = false;
+	MinimapCameraBoom->bInheritYaw = false;
+	#pragma endregion
+
+	#pragma region MinimapCamera(SeceneCaptureComponent)
+	MinimapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("MinimapCapture"));
+	MinimapCapture->SetupAttachment(MinimapCameraBoom);
+	MinimapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
+	MinimapCapture->CaptureSource = ESceneCaptureSource::SCS_SceneColorSceneDepth;
+	MinimapCapture->OrthoWidth = 3062;
+	ConstructorHelpers::FObjectFinder<UCanvasRenderTarget2D> FOBJ_RenderTarget2D(TEXT("Script/Engine.CanvasRenderTarget2D'/Game/UI/MinimapRenderTarget2D.MinimapRenderTarget2D'"));
+	if (FOBJ_RenderTarget2D.Succeeded())
+	{
+		MinimapCapture->TextureTarget = FOBJ_RenderTarget2D.Object;
+	}
+	#pragma endregion
+
+	#pragma region MinimapSprite
+	MinimapSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("MinimapSprite"));
+	MinimapSprite->SetupAttachment(RootComponent);
+	MinimapSprite->SetWorldRotation(FRotator::MakeFromEuler(FVector(90.f, 0.f, -90.f)));
+	MinimapSprite->SetWorldScale3D(FVector(0.5f));
+	MinimapSprite->SetWorldLocation(FVector(0.f,0.f,300.f));
+	MinimapSprite->bVisibleInSceneCaptureOnly = true;
+
+	ConstructorHelpers::FObjectFinder<UPaperSprite> FOBJ_PaperSprite(TEXT("/Script/Paper2D.PaperSprite'/Game/UI/Textures/CharacterMark_Sprite.CharacterMark_Sprite'"));
+	if (FOBJ_PaperSprite.Succeeded())
+	{
+		MinimapSprite->SetSprite(FOBJ_PaperSprite.Object);
+	}
+	#pragma endregion
+
 }
 
 void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
@@ -276,6 +319,42 @@ void ATPSPortfolioCharacter::BeginPlay()
 	//AISight 탐지를 위한 스티뮬라이 추가
 	pStimuliSource->RegisterForSense(UAISense_Sight::StaticClass());
 	pStimuliSource->RegisterWithPerceptionSystem();
+
+	if (IsValid(MinimapCapture))
+	{
+		//지형과 스태틱매시, 표시용 Sprite만 캡쳐
+		MinimapCapture->ShowFlags.SetAntiAliasing(false);
+		MinimapCapture->ShowFlags.SetAtmosphere(false);
+		MinimapCapture->ShowFlags.SetBSP(false);
+		MinimapCapture->ShowFlags.SetCloud(false);
+		MinimapCapture->ShowFlags.SetDecals(false);
+		MinimapCapture->ShowFlags.SetFog(false);
+		MinimapCapture->ShowFlags.SetParticles(false);
+		MinimapCapture->ShowFlags.SetSkeletalMeshes(false);
+		MinimapCapture->ShowFlags.SetDeferredLighting(false);
+		MinimapCapture->ShowFlags.SetInstancedFoliage(false);
+		MinimapCapture->ShowFlags.SetInstancedGrass(false);
+		MinimapCapture->ShowFlags.SetInstancedStaticMeshes(false);
+		MinimapCapture->ShowFlags.SetNaniteMeshes(false);
+		MinimapCapture->ShowFlags.SetTextRender(false);
+		MinimapCapture->ShowFlags.SetTemporalAA(false);
+		MinimapCapture->ShowFlags.SetBloom(false);
+		MinimapCapture->ShowFlags.SetEyeAdaptation(false);
+		MinimapCapture->ShowFlags.SetLocalExposure(false);
+		MinimapCapture->ShowFlags.SetMotionBlur(false);
+		MinimapCapture->ShowFlags.SetToneCurve(false);
+		MinimapCapture->ShowFlags.SetSkyLighting(false);
+		MinimapCapture->ShowFlags.SetAmbientOcclusion(false);
+		MinimapCapture->ShowFlags.SetDynamicShadows(false);
+		MinimapCapture->ShowFlags.SetAmbientCubemap(false);
+		MinimapCapture->ShowFlags.SetDistanceFieldAO(false);
+		MinimapCapture->ShowFlags.SetLightFunctions(false);
+		MinimapCapture->ShowFlags.SetLightShafts(false);
+		MinimapCapture->ShowFlags.SetReflectionEnvironment(false);
+		MinimapCapture->ShowFlags.SetScreenSpaceReflections(false);
+		MinimapCapture->ShowFlags.SetTexturedLightProfiles(false);
+		MinimapCapture->ShowFlags.SetVolumetricFog(false);
+	}
 }
 
 void ATPSPortfolioCharacter::Tick(float DeltaSeconds)

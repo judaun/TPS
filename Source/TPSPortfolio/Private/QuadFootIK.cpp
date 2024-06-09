@@ -152,12 +152,11 @@ void UQuadFootIK::FootIKTrace(float tracedistance, FQuadIKData* ikdata)
 		ikdata->fMoving = 0.1f;
 	}
 
-	DrawDebugBox(GetWorld(), ikdata->vDstLocation, FVector(3.f), FColor::Cyan);
-
-	FHitResult stHitResult2;
-	DrawDebugBox(GetWorld(), vTargetLocation, FVector(5.f), FColor::Blue);
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), ikdata->vLocation, vTargetLocation,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility), true, vecIgnore, EDrawDebugTrace::ForOneFrame, stHitResult2, true, FLinearColor::Blue);
+	//DrawDebugBox(GetWorld(), ikdata->vDstLocation, FVector(3.f), FColor::Cyan);
+	//FHitResult stHitResult2;
+	//DrawDebugBox(GetWorld(), vTargetLocation, FVector(5.f), FColor::Blue);
+	//UKismetSystemLibrary::LineTraceSingle(GetWorld(), ikdata->vLocation, vTargetLocation,
+	//	UEngineTypes::ConvertToTraceType(ECC_Visibility), true, vecIgnore, EDrawDebugTrace::ForOneFrame, stHitResult2, true, FLinearColor::Blue);
 }
 
 void UQuadFootIK::UpdateCapsuleHeight(float Deltatime, float hipoffset)

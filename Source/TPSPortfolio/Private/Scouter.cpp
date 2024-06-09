@@ -56,7 +56,7 @@ void AScouter::InitializeDefaultComponent()
 	Super::InitializeDefaultComponent();
 
 	GetCapsuleComponent()->SetCapsuleSize(60.f, 60.0f);
-	GetCapsuleComponent()->SetHiddenInGame(false);
+	//GetCapsuleComponent()->SetHiddenInGame(false);
 	pFootIK = NewObject<UQuadFootIK>(this, UQuadFootIK::StaticClass(), TEXT("FootIK"));
 	pFootIK->RegisterComponent();
 	auto pQuadFoot= Cast<UQuadFootIK>(pFootIK);
@@ -127,6 +127,8 @@ void AScouter::BreakBone()
 
 	if (Soundtimehandle.IsValid())
 		GetWorldTimerManager().ClearTimer(Soundtimehandle);
+
+	Cast<USquadComponent>(pSquadComponent)->ReleaseSquadPos();
 }
 
 void AScouter::ActiveEffect(FVector direction)

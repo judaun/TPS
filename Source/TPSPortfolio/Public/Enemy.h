@@ -54,6 +54,8 @@ public:
 	
 	EEnemyState GetEnemyState();
 	void SetSquadPos(FVector squadpos);
+	void SetSquad(AEnemy* squadleader);
+	bool HasSquad() {return nullptr == SquadLeader ? false:true;}
 
 	virtual void ActiveEffect(FVector direction){}
 	int32 GetDmg() {
@@ -82,6 +84,15 @@ private:
 	FTimerHandle FDmgcapsuletimehandle;
 
 	FVector vSquadPos;
+
+	UPROPERTY()
+	TWeakObjectPtr<AEnemy> SquadLeader;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class UPaperSpriteComponent* MinimapSprite;
+
+	UPROPERTY()
+		class UPaperSprite* pMarkSprite;
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<AActor> wpTargetActor;

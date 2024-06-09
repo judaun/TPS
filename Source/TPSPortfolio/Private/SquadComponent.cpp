@@ -37,11 +37,14 @@ bool USquadComponent::IsEmptySquadPos()
 
 bool USquadComponent::SetSquadPos(AActor* pactor)
 {
+	if(!IsValid(GetOwner())) return false;
+
 	for (auto& elem : ta_Squad)
 	{
 		if (!elem.pPosOwner.IsValid())
 		{
 			elem.pPosOwner = TWeakObjectPtr<AEnemy>(Cast<AEnemy>(pactor));
+			Cast<AEnemy>(pactor)->SetSquad(Cast<AEnemy>(GetOwner()));
 			return true;
 		}
 	}
@@ -74,6 +77,20 @@ bool USquadComponent::IsMySquad(AActor* pactor)
 	return false;
 }
 
+void USquadComponent::ReleaseSquadPos()
+{
+	if (GetOwner()->GetWorldTimerManager().IsTimerActive(FindSquadTimehandle))
+		GetOwner()->GetWorldTimerManager().ClearTimer(FindSquadTimehandle);
+
+	for (auto& elem : ta_Squad)
+	{
+		if (elem.pPosOwner.IsValid())
+		{
+			elem.pPosOwner->SetSquad(nullptr);
+		}
+	}
+}
+
 // Called when the game starts
 void USquadComponent::BeginPlay()
 {
@@ -84,7 +101,6 @@ void USquadComponent::BeginPlay()
 	if(!GetOwner()->GetWorldTimerManager().IsTimerActive(FindSquadTimehandle))
 		GetOwner()->GetWorldTimerManager().SetTimer(FindSquadTimehandle,[this](){FindSquadMember();}, 5.f,true);
 
-	
 }
 
 
@@ -99,6 +115,7 @@ void USquadComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 void USquadComponent::FindSquadMember()
 {
 	if(!IsValid(GetOwner())) return;
+
 	AActor* pOwner = GetOwner();
 	if(pOwner->IsA(AScouter::StaticClass()) && Cast<AScouter>(pOwner)->GetEnemyState() == EEnemyState::ATTACK ) return;
 	if(!IsEmptySquadPos()) return;
@@ -116,7 +133,8 @@ void USquadComponent::FindSquadMember()
 	{
 		if(vec_elem->IsA(AScouter::StaticClass())) continue;
 		if((vMypos - vec_elem->GetActorLocation()).Length() > 3000.f) continue;
-		if(IsMySquad(vec_elem)) continue;
+		if (Cast<AEnemy>(vec_elem)->HasSquad())continue;
+		
 		if(!SetSquadPos(vec_elem))
 			break;
 	}
