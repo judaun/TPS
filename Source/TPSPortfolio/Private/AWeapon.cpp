@@ -278,6 +278,8 @@ void AWeapon::AttackTrace()
 				FVector vHitDirection = (hitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 				UGameplayStatics::ApplyPointDamage(hitActor, FEquipData.iBaseDmg, vHitDirection, hitResult, pCharacter->GetController(),this,NULL);
 
+				
+
 				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
 			}
 			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation(), isEnemy);

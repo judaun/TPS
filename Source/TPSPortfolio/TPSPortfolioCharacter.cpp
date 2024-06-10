@@ -221,7 +221,7 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	MinimapCapture->SetupAttachment(MinimapCameraBoom);
 	MinimapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
 	MinimapCapture->CaptureSource = ESceneCaptureSource::SCS_SceneColorSceneDepth;
-	MinimapCapture->OrthoWidth = 3062;
+	MinimapCapture->OrthoWidth = 3072;
 	ConstructorHelpers::FObjectFinder<UCanvasRenderTarget2D> FOBJ_RenderTarget2D(TEXT("Script/Engine.CanvasRenderTarget2D'/Game/UI/MinimapRenderTarget2D.MinimapRenderTarget2D'"));
 	if (FOBJ_RenderTarget2D.Succeeded())
 	{
