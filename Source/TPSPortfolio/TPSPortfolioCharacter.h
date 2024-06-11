@@ -33,6 +33,8 @@ using namespace std;
 DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_Aimrate, float);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDele_Player_Bullet, int32, int32);
 DECLARE_DELEGATE_OneParam(FDele_Player_Magazine, int32);
+DECLARE_DELEGATE_OneParam(FDele_Player_HealBox, int32);
+DECLARE_DELEGATE_OneParam(FDele_Player_Grenade, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_HP, float);
 
 UCLASS(config=Game)
@@ -105,6 +107,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* RagdollTestAction;
 
+	/** Heal Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* HealAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
 
@@ -153,7 +159,8 @@ protected:
 
 	void WeaponChangePrimary();
 	void WeaponChangeSecondary();
-	
+	void UseHeal();
+
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
 	void CameraControl(float DeltaSeconds);
@@ -261,6 +268,7 @@ public:
 	bool GetIsSprint() {return bIsSprint;}
 	bool GetIsEquiping() { return bIsEquiping; }
 	bool GetIsHit() {return bIsHit;}
+	bool GetIsHeal() {return bIsHeal;}
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
@@ -285,10 +293,13 @@ public:
 	void PlayAttack(bool ismelee = false);
 	void SetCrawlEnd();
 	void SetHit(bool ishit) {bIsHit = ishit;}
+	void HealEnd();
 
 	FRotator GetFootRotator(bool left);
 
 	void StimulusNoiseEvent();
+	void SetEffectItem(EItemEffType efftype, float feff, int32 ieff);
+
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
@@ -335,6 +346,7 @@ private:
 	bool bIsRagdoll;
 	bool bIsLayingOnBack;
 	bool bIsHit;
+	bool bIsHeal;
 	FVector vRagdollMeshLocation;
 
 	bool bIsCrawl;
@@ -346,5 +358,7 @@ public:
 	FDele_Player_Aimrate func_Player_Aimrate;
 	FDele_Player_Bullet func_Player_Bullet;
 	FDele_Player_Magazine func_Player_Magazine;
+	FDele_Player_HealBox func_Player_HealBox;
+	FDele_Player_Grenade func_Player_Grenade;
 	FDele_Player_HP func_Player_HP;
 };

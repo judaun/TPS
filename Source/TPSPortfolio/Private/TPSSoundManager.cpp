@@ -107,6 +107,8 @@ void ATPSSoundManager::InitSound()
 	AddSound(sound_key::Hurt1, TEXT("/Script/Engine.SoundWave'/Game/Sounds/hurt.hurt'"));
 	AddSound(sound_key::Cannon, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Cannon.Cannon'"));
 	AddSound(sound_key::ImpactGround, TEXT("/Script/Engine.SoundWave'/Game/Sounds/ImpactGround.ImpactGround'"));
+	AddSound(sound_key::Bandage, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Bandage.Bandage'"));
+	AddSound(sound_key::HealEffect, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Healing.Healing'"));
 	//
 	///Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'
 	AddSound(TEXT("FootStep_Ground_1"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_1.ground_1'"));

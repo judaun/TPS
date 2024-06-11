@@ -60,7 +60,7 @@ enum class EEnemyState : uint8
 UENUM(BlueprintType)
 enum class EWeaponMontageState : uint8 
 { 
-	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, MELEE, HIT,
+	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, MELEE, HIT, HEAL,
 };
 
 UENUM(BlueprintType)

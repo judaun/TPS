@@ -145,6 +145,7 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Primary.IA_Primary"), &Weapon1Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Secondary.IA_Secondary"), &Weapon2Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Ragdoll.IA_Ragdoll"), &RagdollTestAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Heal.IA_Heal"), &HealAction);
 
 }
 
@@ -296,7 +297,6 @@ void ATPSPortfolioCharacter::BeginPlay()
 		if (IsValid(TPSController->CrossHairHUDWidget))
 		{
 			Cast<UCrossHair>(TPSController->CrossHairHUDWidget)->BindUserAimRate(this);
-			
 		}	
 		if (IsValid(TPSController->CharacterHUDWidget))
 		{
@@ -355,6 +355,9 @@ void ATPSPortfolioCharacter::BeginPlay()
 		MinimapCapture->ShowFlags.SetTexturedLightProfiles(false);
 		MinimapCapture->ShowFlags.SetVolumetricFog(false);
 	}
+
+	int32 iHealBoxCnt = pInventory->AddItem(itemkey::HealBox50, 3);
+	func_Player_HealBox.ExecuteIfBound(iHealBoxCnt);
 }
 
 void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
@@ -575,6 +578,7 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Ragdoll);
 		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::RagdollComplete);
 
+		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::UseHeal);
 	}
 
 }
@@ -774,6 +778,18 @@ void ATPSPortfolioCharacter::WeaponChangeSecondary()
 
 	iWeaponIndex = 2;
 	bIsEquiping = true;
+}
+
+void ATPSPortfolioCharacter::UseHeal()
+{
+	if(!IsValid(pInventory)) return;
+
+	bIsHeal = true;
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::Bandage, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
@@ -1128,6 +1144,19 @@ void ATPSPortfolioCharacter::SetCrawlEnd()
 	bIsRecoverytoIdle = false;
 }
 
+void ATPSPortfolioCharacter::HealEnd()
+{
+	bIsHeal = false;
+	int32 iHealBoxCnt = pInventory->UseItem(itemkey::HealBox50, 1);
+	func_Player_HealBox.ExecuteIfBound(iHealBoxCnt);
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->SpawnEffect(Eff_key::HealEffect, GetWorld(), GetActorLocation(), GetActorRotation());
+		pInstance->StartSoundLocation(sound_key::HealEffect, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
+}
+
 FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
 {
 	if (!IsValid(FootIK)) return FRotator::ZeroRotator;
@@ -1138,5 +1167,19 @@ FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
 void ATPSPortfolioCharacter::StimulusNoiseEvent()
 {
 	UAISense_Hearing::ReportNoiseEvent(GetWorld(), GetActorLocation(), 1.f, this, 0.f, ai_tag::noise_tag);
+}
+
+void ATPSPortfolioCharacter::SetEffectItem(EItemEffType efftype, float feff, int32 ieff)
+{
+	switch (efftype)
+	{
+		case EItemEffType::STAT_HP :
+			iCurHealth += ieff;
+			iCurHealth += iMaxHealth * (feff / 100.f);
+			iCurHealth = FMath::Clamp(iCurHealth, 0,iMaxHealth);
+			if (func_Player_HP.IsBound())
+				func_Player_HP.Broadcast(float(iCurHealth) / iMaxHealth);
+		break;
+	}
 }
 

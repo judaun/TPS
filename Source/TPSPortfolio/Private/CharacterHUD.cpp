@@ -41,12 +41,17 @@ void UCharacterHUD::SetAmmo(int32 ammocnt, int32 maxammo)
 void UCharacterHUD::SetGrenade(int32 grenadecnt)
 {
 	if (!IsValid(UTGrenade_txt)) return;
+
+	FText text = FText::Format(LOCTEXT("UI_Character_Grenade", "x{0}"), grenadecnt);
+	UTGrenade_txt->SetText(text);
 }
 
 void UCharacterHUD::SetHealBox(int32 healboxcnt)
 {
 	if (!IsValid(UTHealBox_txt)) return;
 
+	FText text = FText::Format(LOCTEXT("UI_Character_Heal", "x{0}"), healboxcnt);
+	UTHealBox_txt->SetText(text);
 }
 
 void UCharacterHUD::SetMagazine(int32 magazinecnt)
@@ -74,5 +79,6 @@ void UCharacterHUD::BindUserData(ATPSPortfolioCharacter* tpscharacter)
 
 	tpscharacter->func_Player_Bullet.AddUObject(this, &UCharacterHUD::SetAmmo);
 	tpscharacter->func_Player_Magazine.BindUObject(this, &UCharacterHUD::SetMagazine);
+	tpscharacter->func_Player_HealBox.BindUObject(this, &UCharacterHUD::SetHealBox);
 	tpscharacter->func_Player_HP.AddUObject(this,&UCharacterHUD::SetHealthGauge);
 }

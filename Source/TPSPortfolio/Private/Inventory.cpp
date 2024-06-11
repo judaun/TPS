@@ -1,5 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#include "Inventory.h"
 #include "TPSGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "TPSDataTable.h"
@@ -7,7 +8,7 @@
 #include "TPSEnum.h"
 #include "Equipment.h"
 #include "AWeapon.h"
-#include "Inventory.h"
+#include "TPSPortfolioCharacter.h"
 
 // Sets default values for this component's properties
 UInventory::UInventory()
@@ -108,23 +109,64 @@ void UInventory::AddItem(FItemTable* itemdata, int32 itemcnt)
 	}
 }
 
+int32 UInventory::AddItem(int32 itemkey, int32 itemcnt)
+{
+	for (auto& map_elem : mInventory)
+	{
+		for (auto& array_elem : map_elem.Value)
+		{
+			if (array_elem->GetItemKey() == itemkey)
+			{
+				array_elem->AddCount(itemcnt);
+				return array_elem->GetCount();
+			}
+		}
+	}
+	return -1;
+}
+
 bool UInventory::UseItem(FItemTable* itemdata, int32 itemcnt)
 {
 	auto TA_Item = mInventory.Find(itemdata->ItemType);
 	if (nullptr == TA_Item) return false;
+	if(!IsValid(GetOwner())) return false;
 
 	for (auto arrayelem : *TA_Item)
 	{
 		if (arrayelem->GetItemKey() != itemdata->Itemkey) continue;	
 		if (arrayelem->GetCount() < itemcnt) return false;
 		
+		Cast<ATPSPortfolioCharacter>(GetOwner())->SetEffectItem(itemdata->EffectType, itemdata->PercentageValue, itemdata->Value);
 		arrayelem->SubtractCount(itemcnt);
+
 		return true;
 	}
 
 	return false;
 }
 
+
+int32 UInventory::UseItem(int32 itemkey, int32 itemcnt)
+{
+	if (!IsValid(GetOwner())) return -1;
+	for (auto& map_elem : mInventory)
+	{
+		for (auto& array_elem : map_elem.Value)
+		{
+			if (array_elem->GetItemKey() == itemkey)
+			{
+				
+				FItemTable itemData = array_elem->GetItemData();
+				Cast<ATPSPortfolioCharacter>(GetOwner())->SetEffectItem(itemData.EffectType, itemData.PercentageValue, itemData.Value);
+				array_elem->SubtractCount(itemcnt);
+
+				return array_elem->GetCount();
+			}
+		}
+	}
+
+	return -1;
+}
 
 void UInventory::AddEquip(FEquipmentTable* equipdata)
 {
