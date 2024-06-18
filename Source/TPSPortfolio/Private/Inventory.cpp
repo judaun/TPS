@@ -184,29 +184,27 @@ void UInventory::AddEquip(FEquipmentTable* equipdata)
 	}
 }
 
-AWeapon* UInventory::LoadWeapon(int32 weaponindex)
+AWeapon* UInventory::LoadWeapon(int32 weaponindex, bool issub)
 {
-	auto TA_Equip = mEquipInventory.Find(EEquipmentType::EQUIP_MAIN_WEAPON);
+	auto TA_Equip = mEquipInventory.Find(issub ? EEquipmentType::EQUIP_SUB_WEAPON : EEquipmentType::EQUIP_MAIN_WEAPON);
 	if (nullptr == TA_Equip) return nullptr;
-	if (TA_Equip->Num() < weaponindex + 1) return nullptr;
-
-	int32 iItemkey =(*TA_Equip)[weaponindex]->GetItemKey();
 	
-	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (nullptr == pGameInstance)
-		return nullptr;
-
-	FEquipmentTable* Itemdata = pGameInstance->GetEquipmentData(iItemkey);
-
-	FTransform SpawnTransform(FRotator::ZeroRotator, FVector::ZeroVector);
-	auto pWeapon = GetWorld()->SpawnActorDeferred<AWeapon>(AWeapon::StaticClass(), SpawnTransform);
-	if (pWeapon)
+	for (auto& elem_Array : *TA_Equip)
 	{
-		pWeapon->DeferredInitialize(Itemdata);
-		pWeapon->FinishSpawning(SpawnTransform);
+		if (elem_Array->GetItemKey() == weaponindex)
+		{
+			FTransform SpawnTransform(FRotator::ZeroRotator, FVector::ZeroVector);
+			auto pWeapon = GetWorld()->SpawnActorDeferred<AWeapon>(AWeapon::StaticClass(), SpawnTransform);
+			if (pWeapon)
+			{
+				pWeapon->DeferredInitialize(elem_Array->GetData(), issub);
+				pWeapon->FinishSpawning(SpawnTransform);
+			}
+
+			return pWeapon;
+		}
 	}
-	
-	return pWeapon;
+	return nullptr;
 }
 
 void UInventory::UnLoadWeapon(FEquipmentTable* equipdata)

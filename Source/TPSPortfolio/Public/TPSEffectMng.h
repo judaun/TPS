@@ -15,6 +15,7 @@ namespace Eff_key
 	TCHAR* const BloodEffect = TEXT("BloodEffect");
 	TCHAR* const CannonEffect = TEXT("CannonShot");
 	TCHAR* const HealEffect = TEXT("HealEffect");
+	TCHAR* const BoomSmall = TEXT("BoomSmall");
 }
 
 UCLASS()

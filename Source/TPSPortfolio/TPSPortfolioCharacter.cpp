@@ -146,6 +146,7 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Secondary.IA_Secondary"), &Weapon2Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Ragdoll.IA_Ragdoll"), &RagdollTestAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Heal.IA_Heal"), &HealAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Grenade.IA_Grenade"), &GrenadeAction);
 
 }
 
@@ -271,9 +272,9 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 
 	FName WeaponSocket(TEXT("r_hand_rifle"));
-	WeaponSlot.Emplace(pInventory->LoadWeapon(0));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
-	//WeaponSlot.Emplace(pInventory->LoadWeapon(2));
+	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
+	//WeaponSlot.Emplace(pInventory->LoadWeapon(3));
 	
 	for (auto elem : WeaponSlot)
 	{
@@ -281,10 +282,18 @@ void ATPSPortfolioCharacter::BeginPlay()
 		elem->SetHide(true);
 	}
 		
-
 	pCurWeapon = WeaponSlot[0];
 	pCurWeapon->SetHide(false);
 	pCurWeapon->SetPlayer(this);
+
+	pCurSubWeapon = pInventory->LoadWeapon(4, true);
+	if (pCurSubWeapon)
+	{
+		pCurSubWeapon->SetPlayer(this);
+		UE_LOG(LogTemp,Log,TEXT("SubWeapon Created"));
+	}
+		
+
 	//pCurWeapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
 
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
@@ -579,6 +588,9 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::RagdollComplete);
 
 		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::UseHeal);
+
+		EnhancedInputComponent->BindAction(GrenadeAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::UseGrenade);
+		EnhancedInputComponent->BindAction(GrenadeAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::UseGrenadeComplete);
 	}
 
 }
@@ -790,6 +802,29 @@ void ATPSPortfolioCharacter::UseHeal()
 	{
 		pInstance->StartSoundLocation(sound_key::Bandage, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
 	}
+}
+
+void ATPSPortfolioCharacter::UseGrenade()
+{
+	if(!IsValid(pCurSubWeapon)) return;
+
+	pCurSubWeapon->ArcTrace();
+	Aim();
+}
+
+void ATPSPortfolioCharacter::UseGrenadeComplete()
+{
+	if (!IsValid(pCurSubWeapon)) return;
+
+	bIsGrenade = true;
+}
+
+void ATPSPortfolioCharacter::UseGrenadeEnd()
+{
+	if (!IsValid(pCurSubWeapon)) return;
+
+	pCurSubWeapon->ArcAttack();
+	AimComplete();
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)

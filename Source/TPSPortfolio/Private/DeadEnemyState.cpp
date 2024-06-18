@@ -40,7 +40,7 @@ void UDeadEnemyState::Explosion()
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetOwner());
 
-	DrawDebugSphere(GetWorld(), pOwnerEnemy->GetActorLocation(),500.f,12,FColor::Red,false,3.f);
+	//DrawDebugSphere(GetWorld(), pOwnerEnemy->GetActorLocation(),500.f,12,FColor::Red,false,3.f);
 	UGameplayStatics::ApplyRadialDamage(GetWorld(), 6000.f, pOwnerEnemy->GetActorLocation(), 500.f, nullptr, ActorsToIgnore, GetOwner(), pOwnerEnemy->GetController(), false, ECollisionChannel::ECC_WorldDynamic);
 }
 

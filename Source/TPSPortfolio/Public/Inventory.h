@@ -47,7 +47,7 @@ public:
 	int32 UseItem(int32 itemkey, int32 itemcnt);
 
 	void AddEquip(FEquipmentTable* equipdata);
-	AWeapon* LoadWeapon(int32 weaponindex);
+	AWeapon* LoadWeapon(int32 weaponindex, bool issub = false);
 	void UnLoadWeapon(FEquipmentTable* equipdata);
 private:
 	TMap<EItemType, TArray<TSharedPtr<Item>>> mInventory;

@@ -13,6 +13,8 @@ class ATPSPortfolioCharacter;
 class AMagazine;
 class UNiagaraSystem;
 class UNiagaraComponent;
+class USplineMeshComponent;
+struct FPredictProjectilePathPointData;
 
 UCLASS()
 class TPSPORTFOLIO_API AWeapon : public AActor , public Equipment
@@ -32,6 +34,8 @@ private:
 	void InitMagazineMesh();
 	void InitTimeLine();
 	void SetSpawnDecal(FVector Location, FRotator Rotator, bool isenemy);
+	void UpdateSplinePath(TArray<FPredictProjectilePathPointData> PathData);
+	void ClearSpline();
 protected:
 	virtual void BeginPlay() override;
 public:	
@@ -39,7 +43,8 @@ public:
 	/* 플레이어 넘겨받아 WeakPtr로 보관 */
 	void SetPlayer(ATPSPortfolioCharacter* character);
 	/* DeferredSpawn으로 beginplay 전 데이터 세팅 */
-	void DeferredInitialize(FEquipmentTable* equipdata);
+	void DeferredInitialize(FEquipmentTable* equipdata, bool issub);
+	void DeferredInitialize(FEquipmentTable equipdata, bool issub);
 	/* 공격용 트레이스 생성 */
 	void AttackTrace();
 	/* 재장전 완료 */
@@ -48,6 +53,10 @@ public:
 	void ReloadStart();
 	void AttackStart();
 	void AttackStop();
+	/** 투척라인트레이스 */
+	void ArcTrace();
+	void ArcAttack();
+
 	void SetAimRate(float aimrate) { fAimRate = aimrate; }
 	void SetHide(bool hide);
 	int32 GetCurrentBullet() { return iCurrentCapacity; }
@@ -70,6 +79,20 @@ public:
 private:
 	UPROPERTY()
 	USkeletalMeshComponent* pMesh;
+
+	#pragma region spline
+	UPROPERTY()
+	TArray<USplineMeshComponent*> ta_Spline_Mesh;
+
+	UPROPERTY()
+	class USplineComponent* Spline_Path;
+
+	UPROPERTY()
+	class UStaticMesh* SplineMesh;
+
+	UPROPERTY()
+	class UMaterialInterface* SplineMaterial;
+	#pragma endregion spline
 
 	FCollisionQueryParams collisionParams;
 	FTimerHandle Firetimehandle;

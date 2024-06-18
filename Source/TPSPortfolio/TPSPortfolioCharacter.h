@@ -111,6 +111,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* HealAction;
 
+	/** Grenade Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* GrenadeAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
 
@@ -160,6 +164,10 @@ protected:
 	void WeaponChangePrimary();
 	void WeaponChangeSecondary();
 	void UseHeal();
+
+	void UseGrenade();
+	void UseGrenadeComplete();
+	
 
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
@@ -269,6 +277,7 @@ public:
 	bool GetIsEquiping() { return bIsEquiping; }
 	bool GetIsHit() {return bIsHit;}
 	bool GetIsHeal() {return bIsHeal;}
+	bool GetIsGrenade() {return bIsGrenade;}
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
@@ -294,6 +303,8 @@ public:
 	void SetCrawlEnd();
 	void SetHit(bool ishit) {bIsHit = ishit;}
 	void HealEnd();
+	void UseGrenadeEnd();
+	void GrenadeEnd() {bIsGrenade = false;}
 
 	FRotator GetFootRotator(bool left);
 
@@ -311,6 +322,9 @@ private:
 
 	UPROPERTY()
 	AWeapon* pCurWeapon;
+
+	UPROPERTY()
+	AWeapon* pCurSubWeapon;
 
 	FVector vControlVectorX;
 	FVector vControlVectorY;
@@ -347,6 +361,7 @@ private:
 	bool bIsLayingOnBack;
 	bool bIsHit;
 	bool bIsHeal;
+	bool bIsGrenade;
 	FVector vRagdollMeshLocation;
 
 	bool bIsCrawl;
