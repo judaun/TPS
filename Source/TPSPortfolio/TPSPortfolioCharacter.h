@@ -37,6 +37,8 @@ DECLARE_DELEGATE_OneParam(FDele_Player_HealBox, int32);
 DECLARE_DELEGATE_OneParam(FDele_Player_Grenade, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_HP, float);
 
+class AWorldItem;
+
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
 {
@@ -103,6 +105,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Weapon2Action;
 
+	/** Weapon2 Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Weapon3Action;
+
 	/** RagdollTest Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* RagdollTestAction;
@@ -114,6 +120,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	/** Grenade Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* GrenadeAction;
+
+	/** Interaction Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* InteractionAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
@@ -144,6 +154,7 @@ private:
 	void InitializeMeshComponent();
 	void InitializeDefaultComponent();
 	void IAFactory(FString address, UInputAction** uiaction);
+	AWorldItem* NearItemCheck();
 protected:
 	void Move(const FInputActionValue& Value);
 	void MoveComplete();
@@ -163,11 +174,13 @@ protected:
 
 	void WeaponChangePrimary();
 	void WeaponChangeSecondary();
+	void WeaponChangeThirdary();
 	void UseHeal();
 
 	void UseGrenade();
 	void UseGrenadeComplete();
 	
+	void Interaction();
 
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
@@ -292,8 +305,7 @@ public:
 	void SetBraking(float fTime);
 	void SetEquiping(bool Equiping) { bIsEquiping = Equiping; }
 	void NotifyEquip();
-	void SetPrimaryEquip();
-	void SetSecondaryEquip();
+	void SetEquip(int32 idx);
 	void SetFrontAcos(float acos) { fFrontAcos = acos; }
 	void SetJumpAway();
 	void SetIsEvade(bool evade) { bIsEvade = evade; }
@@ -310,6 +322,9 @@ public:
 
 	void StimulusNoiseEvent();
 	void SetEffectItem(EItemEffType efftype, float feff, int32 ieff);
+
+	void AddItem(int32 idx, int32 cnt);
+	void LoadWeapon(int32 weaponidx);
 
 private:
 	TPSCharacterState* stCharacterState;
@@ -344,6 +359,7 @@ private:
 	float fSprintSpeed;
 	float fBrakeTimer;
 	float fFrontAcos;
+	float fNearItemChecktime;
 
 	int32 iWeaponIndex;
 	int32 iCurHealth;

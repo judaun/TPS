@@ -81,4 +81,5 @@ void UCharacterHUD::BindUserData(ATPSPortfolioCharacter* tpscharacter)
 	tpscharacter->func_Player_Magazine.BindUObject(this, &UCharacterHUD::SetMagazine);
 	tpscharacter->func_Player_HealBox.BindUObject(this, &UCharacterHUD::SetHealBox);
 	tpscharacter->func_Player_HP.AddUObject(this,&UCharacterHUD::SetHealthGauge);
+	tpscharacter->func_Player_Grenade.BindUObject(this, &UCharacterHUD::SetGrenade);
 }

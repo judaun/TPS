@@ -38,6 +38,7 @@
 #include "PaperSpriteComponent.h"
 #include "Engine/CanvasRenderTarget2D.h"
 #include "PaperSprite.h"
+#include "WorldItem.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -144,9 +145,11 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload.IA_Reload"), &ReloadAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Primary.IA_Primary"), &Weapon1Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Secondary.IA_Secondary"), &Weapon2Action);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Thirdary.IA_Thirdary"), &Weapon3Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Ragdoll.IA_Ragdoll"), &RagdollTestAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Heal.IA_Heal"), &HealAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Grenade.IA_Grenade"), &GrenadeAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Interaction.IA_Interaction"), &InteractionAction);
 
 }
 
@@ -256,6 +259,40 @@ void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
 		*uiaction = IA_Action.Object;
 }
 
+AWorldItem* ATPSPortfolioCharacter::NearItemCheck()
+{
+	TArray<AActor*> TA_Actor;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWorldItem::StaticClass(), TA_Actor);
+	if(TA_Actor.IsEmpty()) return nullptr;
+
+	AActor* NearActor = nullptr;
+	float fDist = 200.f;
+	FVector vCharacterLoc = GetActorLocation();
+	for (auto elem_TA : TA_Actor)
+	{
+		if(!IsValid(elem_TA)) continue;
+		Cast<AWorldItem>(elem_TA)->ObtainRangeIn(false);
+		float fLen = (vCharacterLoc - elem_TA->GetActorLocation()).Length();
+		if (fLen < fDist)
+		{
+			fDist = fLen;
+			NearActor = elem_TA;
+		}
+	}
+
+	if (NearActor != nullptr)
+	{
+		AWorldItem* pItem = Cast<AWorldItem>(NearActor);
+		if (pItem)
+		{
+			pItem->ObtainRangeIn(true);
+			return pItem;
+		}
+			
+	}
+	return nullptr;
+}
+
 void ATPSPortfolioCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -274,7 +311,7 @@ void ATPSPortfolioCharacter::BeginPlay()
 	FName WeaponSocket(TEXT("r_hand_rifle"));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
-	//WeaponSlot.Emplace(pInventory->LoadWeapon(3));
+	WeaponSlot.Emplace(pInventory->LoadWeapon(3));
 	
 	for (auto elem : WeaponSlot)
 	{
@@ -323,6 +360,11 @@ void ATPSPortfolioCharacter::BeginPlay()
 		if (func_Player_Bullet.IsBound())
 			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+	}
+
+	if (IsValid(pCurSubWeapon))
+	{
+		func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
 	}
 	
 	//AISight 탐지를 위한 스티뮬라이 추가
@@ -583,6 +625,7 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 		EnhancedInputComponent->BindAction(Weapon1Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangePrimary);
 		EnhancedInputComponent->BindAction(Weapon2Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangeSecondary);
+		EnhancedInputComponent->BindAction(Weapon3Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangeThirdary);
 
 		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Ragdoll);
 		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::RagdollComplete);
@@ -591,6 +634,9 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 		EnhancedInputComponent->BindAction(GrenadeAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::UseGrenade);
 		EnhancedInputComponent->BindAction(GrenadeAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::UseGrenadeComplete);
+
+		EnhancedInputComponent->BindAction(InteractionAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Interaction);
+
 	}
 
 }
@@ -792,6 +838,14 @@ void ATPSPortfolioCharacter::WeaponChangeSecondary()
 	bIsEquiping = true;
 }
 
+void ATPSPortfolioCharacter::WeaponChangeThirdary()
+{
+	if (bIsEquiping) return;
+
+	iWeaponIndex = 3;
+	bIsEquiping = true;
+}
+
 void ATPSPortfolioCharacter::UseHeal()
 {
 	if(!IsValid(pInventory)) return;
@@ -819,12 +873,24 @@ void ATPSPortfolioCharacter::UseGrenadeComplete()
 	bIsGrenade = true;
 }
 
+void ATPSPortfolioCharacter::Interaction()
+{
+	AWorldItem* pItem = NearItemCheck();
+	if(IsValid(pItem))
+		pItem->ObtainItem(this);
+}
+
 void ATPSPortfolioCharacter::UseGrenadeEnd()
 {
 	if (!IsValid(pCurSubWeapon)) return;
 
 	pCurSubWeapon->ArcAttack();
 	AimComplete();
+
+	if (IsValid(pCurSubWeapon))
+	{
+		func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
+	}
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
@@ -984,25 +1050,19 @@ void ATPSPortfolioCharacter::SetBraking(float fTime)
 
 void ATPSPortfolioCharacter::NotifyEquip()
 {
-	switch (iWeaponIndex)
-	{
-	case 1: SetPrimaryEquip(); 
-		break;
-	case 2: SetSecondaryEquip();
-		break;
-	}
+	SetEquip(iWeaponIndex);
 }
 
-void ATPSPortfolioCharacter::SetPrimaryEquip()
+void ATPSPortfolioCharacter::SetEquip(int32 idx)
 {
-	if (WeaponSlot.Num() < 1) return;
+	if (WeaponSlot.Num() < idx) return;
 
 	if (IsValid(pCurWeapon))
 	{
 		pCurWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		pCurWeapon->SetHide(true);
 
-		bool bIsSame = pCurWeapon == WeaponSlot[0];
+		bool bIsSame = pCurWeapon == WeaponSlot[idx-1];
 
 		pCurWeapon = nullptr;
 		
@@ -1011,46 +1071,10 @@ void ATPSPortfolioCharacter::SetPrimaryEquip()
 
 	
 
-	pCurWeapon = WeaponSlot[0];
+	pCurWeapon = WeaponSlot[idx-1];
 
 	FName WeaponSocket = TEXT("r_hand_rifle");
 	
-	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
-	{
-		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
-		pCurWeapon->SetHide(false);
-	}
-
-	if (IsValid(pCurWeapon))
-	{
-		if (func_Player_Bullet.IsBound())
-			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
-		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
-	}
-}
-
-void ATPSPortfolioCharacter::SetSecondaryEquip()
-{
-	if (WeaponSlot.Num() < 2) return;
-
-	if (IsValid(pCurWeapon))
-	{
-		pCurWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		pCurWeapon->SetHide(true);
-		
-		bool bIsSame = pCurWeapon == WeaponSlot[1];
-		
-		pCurWeapon = nullptr;
-
-		if(bIsSame) return;
-	}
-
-	
-
-	pCurWeapon = WeaponSlot[1];
-
-	FName WeaponSocket = TEXT("r_hand_rifle");
-
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
 	{
 		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
@@ -1086,6 +1110,10 @@ void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
 	{
 		ChangeState(ECharacterState::IDLE);
 	}
+
+	if(fNearItemChecktime < 1.f) fNearItemChecktime+= DeltaSeconds;
+	if(fNearItemChecktime >= 1.f)
+		NearItemCheck();
 }
 
 void ATPSPortfolioCharacter::SlideGround(float DeltaSeconds)
@@ -1216,5 +1244,53 @@ void ATPSPortfolioCharacter::SetEffectItem(EItemEffType efftype, float feff, int
 				func_Player_HP.Broadcast(float(iCurHealth) / iMaxHealth);
 		break;
 	}
+}
+
+void ATPSPortfolioCharacter::AddItem(int32 idx, int32 cnt)
+{
+	if(!IsValid(pInventory)) return;
+
+
+	switch (idx)
+	{
+	case 1://Grenade
+		if(!IsValid(pCurSubWeapon)) return;
+		pCurSubWeapon->AddAmmo(false, cnt);
+		if (IsValid(pCurSubWeapon))
+		{
+			func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
+		}
+	break;
+	case 2://Ammo
+		for (auto& elem_Array : WeaponSlot)
+		{
+			if(!IsValid(elem_Array)) return;
+			if(elem_Array->IsPrimaryWeapon())
+				elem_Array->AddAmmo(true, cnt);
+		}
+		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+	break;
+	case itemkey::HealBox50:
+		int32 iHealBoxCnt = pInventory->AddItem(itemkey::HealBox50, cnt);
+		func_Player_HealBox.ExecuteIfBound(iHealBoxCnt);
+	break;
+	}
+
+}
+
+void ATPSPortfolioCharacter::LoadWeapon(int32 weaponidx)
+{
+	if(!IsValid(pInventory)) return;
+
+	for (auto& elem_Array : WeaponSlot)
+	{
+		if (elem_Array->GetItemKey() == weaponidx)
+		{
+			elem_Array->AddAmmo(true, 1);
+			return;
+		}
+	}
+	
+	WeaponSlot.Emplace(pInventory->LoadWeapon(weaponidx));
 }
 

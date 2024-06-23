@@ -519,6 +519,18 @@ void AWeapon::OnRecoilTimelineFinish()
 	//UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
 }
 
+void AWeapon::AddAmmo(bool magazine, int32 cnt)
+{
+	if (magazine)
+	{
+		iCurrentMagazine += cnt;
+	}
+	else
+	{
+		iCurrentCapacity += cnt;
+	}
+}
+
 void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator, bool isenemy)
 {
 	Rotator.Pitch += 90;

@@ -75,6 +75,9 @@ public:
 	UFUNCTION()
 	void OnRecoilTimelineFinish();
 
+	void AddAmmo(bool magazine, int32 cnt);
+	bool IsPrimaryWeapon() { return FEquipData.EquipType == EEquipmentType::EQUIP_MAIN_WEAPON;}
+
 //value///////////////////////////////////////////////////////
 private:
 	UPROPERTY()
