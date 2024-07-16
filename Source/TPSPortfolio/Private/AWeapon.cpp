@@ -12,8 +12,14 @@
 #include "Engine/DecalActor.h"
 #include "Components/DecalComponent.h"
 #include "TPSGameInstance.h"
+#include "TPSEffectMng.h"
+#include "TPSSoundManager.h"
+#include "Enemy.h"
+#include "Explosive.h"
+#include "Components/SplineMeshComponent.h"
+#include "Components/SplineComponent.h"
 
-#define MAXIMUM_RECOIL_POS 100
+#define MAXIMUM_RECOIL_ANGLE 5
 
 // Sets default values
 AWeapon::AWeapon() : Equipment()
@@ -161,7 +167,6 @@ void AWeapon::BeginPlay()
 	
 	InitMagazineMesh();
 	InitTimeLine();
-
 }
 
 void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
@@ -171,26 +176,66 @@ void AWeapon::SetPlayer(ATPSPortfolioCharacter* character)
 	pCharacter->func_Player_Aimrate.AddUObject(this, &AWeapon::SetAimRate);
 }
 
-void AWeapon::DeferredInitialize(FEquipmentTable* equipdata)
+void AWeapon::DeferredInitialize(FEquipmentTable* equipdata, bool issub)
 {
 	if (nullptr == equipdata)
 		return;
 	///Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'
 	SetData(equipdata);
 	FString strTypeName = GetWeaponTypeName(equipdata->WeaponType);
-	FString meshaddress = FString::Printf(TEXT("Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'"), *strTypeName, *equipdata->Name, *equipdata->Name);
-	InitializeMesh(meshaddress);
-
-	//USkeletalMesh* newMesh = Cast< USkeletalMesh >(StaticLoadObject(USkeletalMesh::StaticClass(), NULL, *weaponaddress));
-	FString strAnimAddress = FString::Printf(TEXT("/Script/Engine.AnimSequence'/Game/Props/Lyra/%s/Animations/%s_Fire.%s_Fire'"), *strTypeName, *equipdata->Name, *equipdata->Name);
-	pShotAnim = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), NULL, *strAnimAddress));
 	
+	if (!issub)
+	{
+		FString meshaddress = FString::Printf(TEXT("Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'"), *strTypeName, *equipdata->Name, *equipdata->Name);
+		InitializeMesh(meshaddress);
+		//USkeletalMesh* newMesh = Cast< USkeletalMesh >(StaticLoadObject(USkeletalMesh::StaticClass(), NULL, *weaponaddress));
+		FString strAnimAddress = FString::Printf(TEXT("/Script/Engine.AnimSequence'/Game/Props/Lyra/%s/Animations/%s_Fire.%s_Fire'"), *strTypeName, *equipdata->Name, *equipdata->Name);
+		pShotAnim = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), NULL, *strAnimAddress));
+	}
+	else
+	{
+		Spline_Path = NewObject<USplineComponent>(this, USplineComponent::StaticClass(), TEXT("Spline"));
+		Spline_Path->RegisterComponent();
+
+		SplineMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("/Script/Engine.StaticMesh'/Game/StarterContent/Shapes/Shape_Cylinder.Shape_Cylinder'")));
+		SplineMaterial = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("/Script/Engine.Material'/Game/Effects/M_AimTrail.M_AimTrail'")));
+	}
 
 	collisionParams.AddIgnoredActor(this);
 	collisionParams.AddIgnoredActor(GetOwner());
 
 	iCurrentCapacity = equipdata->iBaseCapacity;
 	iCurrentMagazine = equipdata->iBaseMagazine;
+}
+
+void AWeapon::DeferredInitialize(FEquipmentTable equipdata, bool issub)
+{
+	///Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'
+	SetData(equipdata);
+	FString strTypeName = GetWeaponTypeName(equipdata.WeaponType);
+
+	if (!issub)
+	{
+		FString meshaddress = FString::Printf(TEXT("Script/Engine.Skeleton'/Game/Props/Lyra/%s/Mesh/%s.%s'"), *strTypeName, *equipdata.Name, *equipdata.Name);
+		InitializeMesh(meshaddress);
+	
+		FString strAnimAddress = FString::Printf(TEXT("/Script/Engine.AnimSequence'/Game/Props/Lyra/%s/Animations/%s_Fire.%s_Fire'"), *strTypeName, *equipdata.Name, *equipdata.Name);
+		pShotAnim = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), NULL, *strAnimAddress));
+	}
+	else
+	{
+		Spline_Path = NewObject<USplineComponent>(this, USplineComponent::StaticClass(), TEXT("Spline"));
+		Spline_Path->RegisterComponent();
+
+		SplineMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("/Script/Engine.StaticMesh'/Game/StarterContent/Shapes/Shape_Cylinder.Shape_Cylinder'")));
+		SplineMaterial = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("/Script/Engine.Material'/Game/Effects/M_AimTrail.M_AimTrail'")));
+	}
+
+	collisionParams.AddIgnoredActor(this);
+	collisionParams.AddIgnoredActor(GetOwner());
+
+	iCurrentCapacity = equipdata.iBaseCapacity;
+	iCurrentMagazine = equipdata.iBaseMagazine;
 }
 
 // Called every frame
@@ -224,19 +269,29 @@ void AWeapon::AttackTrace()
 	if (iCurrentCapacity <= 0) return;
 	--iCurrentCapacity;
 
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+
+	//공격 인터벌 추가
 	fFireMenual += FEquipData.fBaseAttInterval / 1000.f;
 
 	//Bullet spawn pos
 	FVector vfireStart = pMesh->GetSocketLocation(TEXT("Muzzle"));
 	FVector vDir;
+	//트레이스 생성 갯수 조절
 	int32 iFirecnt = FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN ? 10 : 1;
 	for (int32 i = 0; i < iFirecnt; ++i)
 	{
 		if (pCharacter.IsValid())
 		{
 			pCharacter->PlayAttack();
-			FVector vAimPos = pCharacter->GetAimPosVector() + GetAimrateRecoilPosition();
+			float fYawAngle = 0.f;
+			float fPitchAngle = 0.f;
+			GetAimrateRecoilPosition(&fYawAngle, &fPitchAngle);
+			FVector vAimPos = pCharacter->GetAimPosVector();
 			vDir = (vAimPos - vfireStart).GetSafeNormal();
+			vDir = vDir.RotateAngleAxis(fYawAngle,FVector::UpVector);
+			vDir = vDir.RotateAngleAxis(fPitchAngle, pCharacter->GetControlVector(false));
+			UE_LOG(LogTemp,Log,TEXT("%f,%f"), fYawAngle, fPitchAngle);
 		}
 
 
@@ -249,12 +304,28 @@ void AWeapon::AttackTrace()
 		//DrawDebugLine(currentWorld, vfireStart, vfireEnd, FColor::Red, false, 0.3f);
 		if (currentWorld->LineTraceSingleByChannel(hitResult, vfireStart, vfireEnd, ECC_Visibility, collisionParams))
 		{
+			bool isEnemy = false;
 			if (hitResult.GetActor())
 			{
 				auto hitActor = hitResult.GetActor();
+				
+				if (hitActor->IsA(AEnemy::StaticClass()))
+				{
+					if(Cast<AEnemy>(hitActor)->GetHP() <= FEquipData.iBaseDmg)
+						pGameInstance->StartSoundLocation(sound_key::KillMark, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_MEDIUM, 1.f);
+					else
+						pGameInstance->StartSoundLocation(sound_key::HitMark, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_MEDIUM, 1.f);
+					isEnemy = true;
+				}
+					
+				FVector vHitDirection = (hitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+				UGameplayStatics::ApplyPointDamage(hitActor, FEquipData.iBaseDmg, vHitDirection, hitResult, pCharacter->GetController(),this,NULL);
+
+				
+
 				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
 			}
-			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation());
+			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation(), isEnemy);
 		}
 
 		
@@ -283,9 +354,12 @@ void AWeapon::AttackTrace()
 		pMesh->PlayAnimation(pShotAnim, false);
 	}
 		
-	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	
 	FString strSoundName = FString::Printf(TEXT("%s_Shot"), *FEquipData.Name);
 	if (nullptr != pGameInstance) pGameInstance->StartSoundLocationRandomPitch(*strSoundName, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
+
+	//소리 PerceptionEvent 발생
+	pCharacter->StimulusNoiseEvent();
 }
 
 void AWeapon::Reload()
@@ -346,33 +420,76 @@ void AWeapon::AttackStop()
 	}
 }
 
+void AWeapon::ArcTrace()
+{
+	if(!pCharacter.IsValid()) return;
+
+	if (iCurrentCapacity <= 0) return;
+
+	FPredictProjectilePathResult Result;
+	FVector vLocation = pCharacter->GetMesh()->GetSocketLocation(FName(TEXT("l_hand_socket")));
+	FVector vAimPos = pCharacter->GetAimPosVector();
+	FVector vLaunchVector = (vAimPos - vLocation).GetSafeNormal();
+	vLaunchVector = vLaunchVector.RotateAngleAxis(-30.f, pCharacter->GetControlVector(false));
+	vLaunchVector*=1000.f;
+	FPredictProjectilePathParams Params(50.f, vLocation, vLaunchVector, 10.f, ECC_Visibility);
+	Params.DrawDebugType == EDrawDebugTrace::ForOneFrame;
+	Params.ActorsToIgnore.Add(this);
+	Params.ActorsToIgnore.Add(GetOwner());
+
+	if (UGameplayStatics::PredictProjectilePath(GetWorld(), Params, Result))
+	{
+		UpdateSplinePath(Result.PathData);
+	}
+}
+
+void AWeapon::ArcAttack()
+{
+	ClearSpline();
+	if (!pCharacter.IsValid()) return;
+
+	if(iCurrentCapacity <= 0) return;
+	--iCurrentCapacity;
+
+	
+
+	FVector vLocation = pCharacter->GetMesh()->GetSocketLocation(FName(TEXT("l_hand_socket")));
+	FVector vAimPos = pCharacter->GetAimPosVector();
+	FVector vLaunchVector = (vAimPos - vLocation).GetSafeNormal();
+	vLaunchVector = vLaunchVector.RotateAngleAxis(-30.f, pCharacter->GetControlVector(false));
+	vLaunchVector *= 1000.f;
+
+	FTransform SpawnTransform(FRotator::ZeroRotator, vLocation);
+	auto pExplosive = GetWorld()->SpawnActorDeferred<AExplosive>(AExplosive::StaticClass(), SpawnTransform);
+	if (pExplosive)
+	{
+		pExplosive->DeferredInitialize(false);
+		pExplosive->SetExplosiveValue(true, 800.f, FEquipData.iBaseDmg);
+		pExplosive->FinishSpawning(SpawnTransform);
+	}
+	pExplosive->AddActorWorldTransform(SpawnTransform);
+	pExplosive->AddImpuse(vLaunchVector);
+}
+
 void AWeapon::SetHide(bool hide)
 {
 	SetActorHiddenInGame(hide);
-	pMagazine->SetActorHiddenInGame(hide);
+	if(IsValid(pMagazine))
+		pMagazine->SetActorHiddenInGame(hide);
 }
 
-FVector AWeapon::GetAimrateRecoilPosition()
+void AWeapon::GetAimrateRecoilPosition(float* yawangle, float* pitchangle)
 {
-	float fX = 0.f;
-	float fY = 0.f;
-	float fZ = 0.f;
-
 	float fCharacterAimrate = fAimRate * 0.5f; // 0 ~ 0.5
 	float fWeaponAimrate = 1.f - (FEquipData.fBaseAccuracy/1000.f); // 0 ~ 1
-	float fMaxlen = MAXIMUM_RECOIL_POS * (fCharacterAimrate + fWeaponAimrate) +1; // 1000 * (0~1.5)+zerodivide보정
+	float fMaxlen = MAXIMUM_RECOIL_ANGLE * (fCharacterAimrate + fWeaponAimrate) +1; // 1000 * (0~1.5)+zerodivide보정
 
-	fX = rand() % (int)fMaxlen;
-	fY = rand() % (int)fMaxlen;
-	fZ = rand() % (int)fMaxlen;
+	*yawangle = rand() % (int)(fMaxlen*100.f) / 100.f;
+	*pitchangle = rand() % (int)(fMaxlen*100.f) / 100.f;
 
-	fX *= rand() % 2 == 0 ? -1.f : 1.f;
-	fY *= rand() % 2 == 0 ? -1.f : 1.f;
-	fZ *= rand() % 2 == 0 ? -1.f : 1.f;
+	*yawangle *= rand() % 2 == 0 ? -1.f : 1.f;
+	*pitchangle *= rand() % 2 == 0 ? -1.f : 1.f;
 
-	UE_LOG(LogTemp, Log, TEXT("MaxLen :%f, X:%f, Y:%f, Z:%f"), fMaxlen, fX, fY, fZ);
-
-	return FVector(fX, fY, fZ);
 }
 
 bool AWeapon::IsFullCapacity()
@@ -402,15 +519,87 @@ void AWeapon::OnRecoilTimelineFinish()
 	//UE_LOG(LogTemp, Log, TEXT("TimeLineEnd"));
 }
 
-void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator)
+void AWeapon::AddAmmo(bool magazine, int32 cnt)
+{
+	if (magazine)
+	{
+		iCurrentMagazine += cnt;
+	}
+	else
+	{
+		iCurrentCapacity += cnt;
+	}
+}
+
+void AWeapon::SetSpawnDecal(FVector Location, FRotator Rotator, bool isenemy)
 {
 	Rotator.Pitch += 90;
 
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (pGameInstance)
 	{
-		pGameInstance->SpawnEffect(TEXT("BulletHit"), GetWorld(), Location, Rotator, FVector(0.5f), true);
+		isenemy ? pGameInstance->SpawnEffect(Eff_key::HitEffect, GetWorld(), Location, Rotator, FVector(0.5f), true) 
+				: pGameInstance->SpawnEffect(TEXT("BulletHit"), GetWorld(), Location, Rotator, FVector(0.5f), true);
 		pGameInstance->SpawnDecal(TEXT("BulletHole"), GetWorld(), 5.f, Location, Rotator, FVector(4.f), 0.002f);
+	}
+}
+
+void AWeapon::UpdateSplinePath(TArray<FPredictProjectilePathPointData> PathData)
+{
+	if(!IsValid(Spline_Path)) return;
+
+	ClearSpline();
+
+	for (auto& elem_Path : PathData)
+	{
+		Spline_Path->AddSplinePoint(elem_Path.Location,ESplineCoordinateSpace::World);
+	}
+
+	for (int32 i = 0; i < Spline_Path->GetNumberOfSplinePoints()-1; ++i)
+	{
+		USplineMeshComponent* pMeshComponent = NewObject<USplineMeshComponent>(this, USplineMeshComponent::StaticClass());
+		pMeshComponent->SetForwardAxis(ESplineMeshAxis::Z);
+		if(SplineMesh)
+		pMeshComponent->SetStaticMesh(SplineMesh);
+		pMeshComponent->SetMobility(EComponentMobility::Movable);
+		pMeshComponent->CreationMethod = EComponentCreationMethod::UserConstructionScript;
+		pMeshComponent->RegisterComponentWithWorld(GetWorld());
+		pMeshComponent->AttachToComponent(Spline_Path, FAttachmentTransformRules::KeepRelativeTransform);
+		pMeshComponent->SetStartScale(FVector2D(UKismetSystemLibrary::MakeLiteralFloat(0.1f), UKismetSystemLibrary::MakeLiteralFloat(0.1f)));
+		pMeshComponent->SetEndScale(FVector2D(UKismetSystemLibrary::MakeLiteralFloat(0.1f), UKismetSystemLibrary::MakeLiteralFloat(0.1f)));
+
+		const FVector StartPoint = Spline_Path->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local);
+		const FVector StartTangent = Spline_Path->GetTangentAtSplinePoint(i, ESplineCoordinateSpace::Local);
+		const FVector EndPoint = Spline_Path->GetLocationAtSplinePoint(i+1, ESplineCoordinateSpace::Local);
+		const FVector EndTangent = Spline_Path->GetTangentAtSplinePoint(i+1, ESplineCoordinateSpace::Local);
+
+		pMeshComponent->SetStartAndEnd(StartPoint,StartTangent,EndPoint,EndTangent,true);
+		pMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		//Material 셋
+		if(SplineMaterial)
+		pMeshComponent->SetMaterial(0, SplineMaterial);
+
+		ta_Spline_Mesh.Add(pMeshComponent);
+	}
+
+	//Decal set
+
+}
+
+void AWeapon::ClearSpline()
+{
+	if (!IsValid(Spline_Path)) return;
+
+	Spline_Path->ClearSplinePoints(true);
+	if (ta_Spline_Mesh.Num() > 0)
+	{
+		for (auto elem_Meshs : ta_Spline_Mesh)
+		{
+			if (IsValid(elem_Meshs))
+				elem_Meshs->DestroyComponent();
+		}
+		ta_Spline_Mesh.Empty();
 	}
 }
 

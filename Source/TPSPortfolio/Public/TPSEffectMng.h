@@ -8,6 +8,16 @@
 
 class UNiagaraSystem;
 
+namespace Eff_key
+{
+	TCHAR* const DistortionBoom = TEXT("DistBoon");
+	TCHAR* const HitEffect = TEXT("HitEffect");
+	TCHAR* const BloodEffect = TEXT("BloodEffect");
+	TCHAR* const CannonEffect = TEXT("CannonShot");
+	TCHAR* const HealEffect = TEXT("HealEffect");
+	TCHAR* const BoomSmall = TEXT("BoomSmall");
+}
+
 UCLASS()
 class TPSPORTFOLIO_API ATPSEffectMng : public AActor
 {

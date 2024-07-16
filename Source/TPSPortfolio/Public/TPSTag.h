@@ -1,0 +1,19 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+
+/**
+ * 
+ */
+
+namespace ai_tag
+{
+	TCHAR* const noise_tag = TEXT("Noise");
+ }
+
+namespace cap_tag
+{
+	TCHAR* const EnemyDmgCap = TEXT("EnemyDamageCapsule");
+ }

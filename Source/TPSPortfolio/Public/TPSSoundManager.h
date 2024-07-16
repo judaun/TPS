@@ -8,6 +8,23 @@
 
 enum class ESoundAttenuationType : uint8;
 
+namespace sound_key
+{
+	TCHAR* const HitMark = TEXT("Hitmark");
+	TCHAR* const KillMark = TEXT("KillMark");
+	TCHAR* const Boom1 = TEXT("Boom1");
+	TCHAR* const MetalWalk = TEXT("MetalWalk");
+	TCHAR* const Servo1 = TEXT("Servo1");
+	TCHAR* const Servo2 = TEXT("Servo2");
+	TCHAR* const RobotOff = TEXT("RobotOff");
+	TCHAR* const MachineJump = TEXT("MachineJump");
+	TCHAR* const Hurt1 = TEXT("Hurt1");
+	TCHAR* const Cannon = TEXT("Cannon");
+	TCHAR* const ImpactGround = TEXT("ImpactGround");
+	TCHAR* const HealEffect = TEXT("HealEffect");
+	TCHAR* const Bandage = TEXT("Bandage");
+}
+
 UCLASS()
 class TPSPORTFOLIO_API ATPSSoundManager : public AActor
 {

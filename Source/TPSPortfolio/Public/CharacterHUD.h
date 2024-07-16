@@ -31,7 +31,6 @@ public:
 		void SetMagazine(int32 magazinecnt);
 
 		void SetHealthGauge(float healthrate);
-		void SetStaminaGauge(float staminarate);
 
 		void BindUserData(ATPSPortfolioCharacter* tpscharacter);
 private:
@@ -46,6 +45,7 @@ private:
 
 	UPROPERTY()
 	UProgressBar* UPHealth;
-	UPROPERTY()
-	UProgressBar* UPStamina;
+
+	FVector srcColor;
+	FVector dstColor;
 };

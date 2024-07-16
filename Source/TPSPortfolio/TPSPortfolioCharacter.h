@@ -9,6 +9,7 @@
 #include "CharacterState.h"
 #include "AWeapon.h"
 #include "Inventory.h"
+#include "Components/TimelineComponent.h"
 #include "TPSPortfolioCharacter.generated.h"
 
 #define BRAKE_RUN 0.5f
@@ -32,12 +33,18 @@ using namespace std;
 DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_Aimrate, float);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDele_Player_Bullet, int32, int32);
 DECLARE_DELEGATE_OneParam(FDele_Player_Magazine, int32);
+DECLARE_DELEGATE_OneParam(FDele_Player_HealBox, int32);
+DECLARE_DELEGATE_OneParam(FDele_Player_Grenade, int32);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_HP, float);
+
+class AWorldItem;
 
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+#pragma region Components
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
@@ -45,6 +52,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UAnimInstance> AnimationInstance;
 
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -94,20 +105,56 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Weapon2Action;
 
+	/** Weapon2 Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Weapon3Action;
+
+	/** RagdollTest Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* RagdollTestAction;
+
+	/** Heal Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* HealAction;
+
+	/** Grenade Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* GrenadeAction;
+
+	/** Interaction Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* InteractionAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
+	class UAIPerceptionStimuliSourceComponent* pStimuliSource;
+
+	/*UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
+	class UActorComponent* pMinimap;*/
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class USpringArmComponent* MinimapCameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class USceneCaptureComponent2D* MinimapCapture;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Minimap, meta = (AllowPrivateAccess = "true"))
+		class UPaperSpriteComponent* MinimapSprite;
+
+#pragma endregion
 
 public:
 	ATPSPortfolioCharacter();
 	~ATPSPortfolioCharacter();
-
 private:
 	void initialize();
 	void InitializeInputContext();
 	void InitializeMeshComponent();
 	void InitializeDefaultComponent();
-
 	void IAFactory(FString address, UInputAction** uiaction);
+	AWorldItem* NearItemCheck();
 protected:
 	void Move(const FInputActionValue& Value);
 	void MoveComplete();
@@ -122,10 +169,19 @@ protected:
 	void AttackComplete();
 	void Reload();
 	void Evade();
-	
+	void Ragdoll();
+	void RagdollComplete();
+
 	void WeaponChangePrimary();
 	void WeaponChangeSecondary();
+	void WeaponChangeThirdary();
+	void UseHeal();
+
+	void UseGrenade();
+	void UseGrenadeComplete();
 	
+	void Interaction();
+
 	void SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector);
 	void Turn(float DeltaSeconds);
 	void CameraControl(float DeltaSeconds);
@@ -138,10 +194,14 @@ protected:
 	void UpdateState(float DeltaSeconds);
 	void ChangeState(ECharacterState eChangeState);
 	bool CanChangeState(ECharacterState changestate);
-protected:
+	
+	UFUNCTION() void RPC_ChangeState(ECharacterState eChangeState);
+	UFUNCTION(Server, Reliable) void ServerRPC_ChangeState(ECharacterState eChangeState);
+	UFUNCTION(NetMulticast, Reliable) void MulticastRPC_ChangeState(ECharacterState eChangeState);
+
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	// To add mapping context
 	virtual void BeginPlay();
 
@@ -153,6 +213,7 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+#pragma region BlueprintCallable
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
 	bool GetisBraking() {return bIsBraking;}
 
@@ -199,9 +260,20 @@ public:
 	bool GetIsCrawl() { return bIsCrawl; }
 
 	UFUNCTION(BlueprintCallable, Category = TPSCharater)
-	bool GetIsCrawltoIdle() { return bIsCrawltoIdle; }
+	bool GetIsCrawltoIdle() { return bIsRecoverytoIdle; }
+
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetIsRagdoll() { return bIsRagdoll; }
+	
+	UFUNCTION(BlueprintCallable, Category = TPSCharater)
+	bool GetIsLayingOnBack() { return bIsLayingOnBack; }
+#pragma endregion
 
 public:
+	float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+	void NotifyActorBeginOverlap(AActor* OtherActor) override;
+
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
 	FVector GetControlVector(bool IsFoward = true);
@@ -216,6 +288,9 @@ public:
 	bool GetIsMoving() { return bIsMoving; }
 	bool GetIsSprint() {return bIsSprint;}
 	bool GetIsEquiping() { return bIsEquiping; }
+	bool GetIsHit() {return bIsHit;}
+	bool GetIsHeal() {return bIsHeal;}
+	bool GetIsGrenade() {return bIsGrenade;}
 
 	void SetLerpVector(FVector LerpVecter) { vLerpDirection = LerpVecter; }
 	void SetCrossAngle(float CrossAngle) { fCrossAngle = CrossAngle; }
@@ -230,8 +305,7 @@ public:
 	void SetBraking(float fTime);
 	void SetEquiping(bool Equiping) { bIsEquiping = Equiping; }
 	void NotifyEquip();
-	void SetPrimaryEquip();
-	void SetSecondaryEquip();
+	void SetEquip(int32 idx);
 	void SetFrontAcos(float acos) { fFrontAcos = acos; }
 	void SetJumpAway();
 	void SetIsEvade(bool evade) { bIsEvade = evade; }
@@ -239,20 +313,38 @@ public:
 	void SetIsCrawl(bool crawl) { bIsCrawl = crawl; }
 	void PlayAttack(bool ismelee = false);
 	void SetCrawlEnd();
+	void SetHit(bool ishit) {bIsHit = ishit;}
+	void HealEnd();
+	void UseGrenadeEnd();
+	void GrenadeEnd() {bIsGrenade = false;}
 
 	FRotator GetFootRotator(bool left);
+
+	void StimulusNoiseEvent();
+	void SetEffectItem(EItemEffType efftype, float feff, int32 ieff);
+
+	void AddItem(int32 idx, int32 cnt);
+	void LoadWeapon(int32 weaponidx);
+
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
-
+	
+	FTimerHandle Ragdolltimehandle;
+	
 	UPROPERTY()
 	TArray<AWeapon*> WeaponSlot;
 
 	UPROPERTY()
 	AWeapon* pCurWeapon;
 
+	UPROPERTY()
+	AWeapon* pCurSubWeapon;
+
 	FVector vControlVectorX;
 	FVector vControlVectorY;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	FVector vChangeDirection;
 	FVector vLerpDirection;
 	FVector vAimPosition;
@@ -267,8 +359,11 @@ private:
 	float fSprintSpeed;
 	float fBrakeTimer;
 	float fFrontAcos;
+	float fNearItemChecktime;
 
 	int32 iWeaponIndex;
+	int32 iCurHealth;
+	int32 iMaxHealth;
 
 	bool bIsRun;
 	bool bIsSprint;
@@ -278,16 +373,23 @@ private:
 	bool bIsAimTurn;
 	bool bIsEquiping;
 	bool bIsEvade;
+	bool bIsRagdoll;
+	bool bIsLayingOnBack;
+	bool bIsHit;
+	bool bIsHeal;
+	bool bIsGrenade;
+	FVector vRagdollMeshLocation;
+
 	bool bIsCrawl;
-	bool bIsCrawltoIdle;
+	bool bIsRecoverytoIdle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TPSCharater, meta = (AllowPrivateAccess = "true"))
 	bool bIsReloading;
 public:
 	FDele_Player_Aimrate func_Player_Aimrate;
 	FDele_Player_Bullet func_Player_Bullet;
 	FDele_Player_Magazine func_Player_Magazine;
+	FDele_Player_HealBox func_Player_HealBox;
+	FDele_Player_Grenade func_Player_Grenade;
+	FDele_Player_HP func_Player_HP;
 };

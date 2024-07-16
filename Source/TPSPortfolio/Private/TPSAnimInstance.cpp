@@ -15,7 +15,6 @@ void UTPSAnimInstance::NativeInitializeAnimation()
 		pCharacter = TWeakObjectPtr<ATPSPortfolioCharacter>(Cast<ATPSPortfolioCharacter>(pPawn));
 
 	InitMontage();
-
 }
 
 void UTPSAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -28,6 +27,25 @@ void UTPSAnimInstance::PlayAnimMontage()
 {
 	if (nullptr == pCharacter) return;
 	auto WeaponType = pCharacter->GetWeaponType();
+
+	if (pCharacter->GetIsHeal())
+	{
+		PlayHeal();
+		return;
+	}
+	
+	if (pCharacter->GetIsGrenade())
+	{
+		PlayGrenade();
+		return;
+	}
+
+	if (pCharacter->GetIsHit())
+	{
+		PlayHit();
+		return;
+	}
+
 	//비무장상태에서는 무기관련 몽타주 없음
 	if (pCharacter->GetIsEquiping())
 	{
@@ -50,7 +68,7 @@ void UTPSAnimInstance::PlayAnimMontage()
 		return;
 	}
 
-	if (pCharacter->GetIsCrawl())
+	if (pCharacter->GetIsCrawl()|| pCharacter->GetIsCrawltoIdle())
 	{
 		Montage_Stop(0.1f);
 		return;
@@ -96,6 +114,11 @@ void UTPSAnimInstance::InitMontage()
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Run_Pistol.TPS_Run_Pistol'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::RUN);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Pistol_Equip.TPS_Pistol_Equip'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::EQUIP);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Pistol_Melee.TPS_Pistol_Melee'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::MELEE);
+
+	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_hit.TPS_hit'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::HIT);
+	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Healing.TPS_Healing'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::HEAL);
+	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_GrenadeHold.TPS_GrenadeHold'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::GRENADE_HOLD);
+	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_GrenadeThrow.TPS_GrenadeThrow'"), EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::GRENADE_THROW);
 
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/TPS_Rifle_Idle.TPS_Rifle_Idle'"), EWeaponType::WEAPON_RIFLE, EWeaponMontageState::IDLE);
 	AddMontage(TEXT("/Script/Engine.AnimMontage'/Game/Characters/PlayerCharacters/Vepley/Animation/Lyra/TPS_Rifle_Aim.TPS_Rifle_Aim'"), EWeaponType::WEAPON_RIFLE, EWeaponMontageState::AIM);
@@ -248,6 +271,39 @@ void UTPSAnimInstance::PlayMelee(EWeaponType weapontype)
 	}
 }
 
+void UTPSAnimInstance::PlayHit()
+{
+	auto pMontage = GetMontage(EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::HIT);
+	if (!Montage_IsPlaying(pMontage))
+	{
+		Montage_Play(pMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, true);
+		FOnMontageBlendingOutStarted BlendOutDele;
+		BlendOutDele.BindUObject(this, &UTPSAnimInstance::BlendOutHit);
+		Montage_SetBlendingOutDelegate(BlendOutDele);
+	}
+}
+
+void UTPSAnimInstance::PlayHeal()
+{
+	auto pMontage = GetMontage(EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::HEAL);
+	if (!Montage_IsPlaying(pMontage))
+	{
+		Montage_Play(pMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, true);
+	}
+}
+
+void UTPSAnimInstance::PlayGrenade()
+{
+	auto pMontage = GetMontage(EWeaponType::WEAPON_HANDGUN, EWeaponMontageState::GRENADE_THROW);
+	if (!Montage_IsPlaying(pMontage))
+	{
+		Montage_Play(pMontage, 1.f, EMontagePlayReturnType::MontageLength, 0.f, true);
+		FOnMontageBlendingOutStarted BlendOutDele;
+		BlendOutDele.BindUObject(this, &UTPSAnimInstance::BlendOutThrow);
+		Montage_SetBlendingOutDelegate(BlendOutDele);
+	}
+}
+
 void UTPSAnimInstance::BlendOutReload(class UAnimMontage*, bool interrupt)
 {
 	if (nullptr == pCharacter) return;
@@ -274,6 +330,18 @@ void UTPSAnimInstance::BlendOutMelee(class UAnimMontage*, bool interrupt)
 	if (nullptr == pCharacter) return;
 
 	pCharacter->SetAttacking(false);
+}
+
+void UTPSAnimInstance::BlendOutHit(class UAnimMontage*, bool interrupt)
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->SetHit(false);
+}
+
+void UTPSAnimInstance::BlendOutThrow(class UAnimMontage*, bool interrupt)
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->GrenadeEnd();
 }
 
 void UTPSAnimInstance::AnimNotify_WeaponSet()
@@ -353,4 +421,16 @@ void UTPSAnimInstance::AnimNotify_Swosh()
 	{
 		pGameInstance->StartSoundLocationRandomPitch(TEXT("Swosh"), GetWorld(), pCharacter->GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE, 0.5f);
 	}
+}
+
+void UTPSAnimInstance::AnimNotify_Healing()
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->HealEnd();
+}
+
+void UTPSAnimInstance::AnimNotify_GrenadeEnd()
+{
+	if (nullptr == pCharacter) return;
+	pCharacter->UseGrenadeEnd();
 }

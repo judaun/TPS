@@ -5,6 +5,7 @@
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include "TPSPortfolioCharacter.h"
+#include "Components/Image.h"
 
 #define LOCTEXT_NAMESPACE "TPSNameSpace"
 
@@ -18,9 +19,10 @@ void UCharacterHUD::NativeConstruct()
 	UTAmmo_txt = Cast<UTextBlock>(GetWidgetFromName(TEXT("Ammo_txt")));
 	UTMagazine_txt = Cast<UTextBlock>(GetWidgetFromName(TEXT("Magazine_txt")));
 
-	//stamina_gauge Health_Gauge
-	UPStamina = Cast<UProgressBar>(GetWidgetFromName(TEXT("stamina_gauge")));
 	UPHealth = Cast<UProgressBar>(GetWidgetFromName(TEXT("Health_Gauge")));
+
+	srcColor = {0.15f,1.f,0.15f};
+	dstColor = {1.f, 0.15f, 0.15f};
 }
 
 void UCharacterHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -39,12 +41,17 @@ void UCharacterHUD::SetAmmo(int32 ammocnt, int32 maxammo)
 void UCharacterHUD::SetGrenade(int32 grenadecnt)
 {
 	if (!IsValid(UTGrenade_txt)) return;
+
+	FText text = FText::Format(LOCTEXT("UI_Character_Grenade", "x{0}"), grenadecnt);
+	UTGrenade_txt->SetText(text);
 }
 
 void UCharacterHUD::SetHealBox(int32 healboxcnt)
 {
 	if (!IsValid(UTHealBox_txt)) return;
 
+	FText text = FText::Format(LOCTEXT("UI_Character_Heal", "x{0}"), healboxcnt);
+	UTHealBox_txt->SetText(text);
 }
 
 void UCharacterHUD::SetMagazine(int32 magazinecnt)
@@ -59,12 +66,11 @@ void UCharacterHUD::SetHealthGauge(float healthrate)
 {
 	if (!IsValid(UPHealth)) return;
 
-}
-
-void UCharacterHUD::SetStaminaGauge(float staminarate)
-{
-	if (!IsValid(UPStamina)) return;
-
+	UPHealth->SetPercent(healthrate);
+	
+	FVector vLerp = FMath::Lerp(dstColor, srcColor,healthrate);
+	FLinearColor color = FLinearColor(vLerp.X,vLerp.Y,vLerp.Z,1.f);
+	UPHealth->SetFillColorAndOpacity(color);
 }
 
 void UCharacterHUD::BindUserData(ATPSPortfolioCharacter* tpscharacter)
@@ -73,4 +79,7 @@ void UCharacterHUD::BindUserData(ATPSPortfolioCharacter* tpscharacter)
 
 	tpscharacter->func_Player_Bullet.AddUObject(this, &UCharacterHUD::SetAmmo);
 	tpscharacter->func_Player_Magazine.BindUObject(this, &UCharacterHUD::SetMagazine);
+	tpscharacter->func_Player_HealBox.BindUObject(this, &UCharacterHUD::SetHealBox);
+	tpscharacter->func_Player_HP.AddUObject(this,&UCharacterHUD::SetHealthGauge);
+	tpscharacter->func_Player_Grenade.BindUObject(this, &UCharacterHUD::SetGrenade);
 }

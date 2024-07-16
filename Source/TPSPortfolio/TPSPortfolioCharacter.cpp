@@ -19,10 +19,26 @@
 #include "EvadeCharacterState.h"
 #include "CrossHair.h"
 #include "CharacterHUD.h"
+#include "HitDirection.h"
 #include "AWeapon.h"
 #include "TPSAnimInstance.h"
 #include "C_FootIK.h"
 #include "TPSGameInstance.h"
+#include "Net/UnrealNetwork.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
+#include "Perception/AISense_Hearing.h"
+#include "TPSTag.h"
+#include "Engine/DamageEvents.h"
+#include "Enemy.h"
+#include "TPSEffectMng.h"
+#include "CalculationFunction.h"
+#include "TPSSoundManager.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "PaperSpriteComponent.h"
+#include "Engine/CanvasRenderTarget2D.h"
+#include "PaperSprite.h"
+#include "WorldItem.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -41,6 +57,7 @@ ATPSPortfolioCharacter::~ATPSPortfolioCharacter()
 	vecState.clear();
 	func_Player_Bullet.Clear();
 	func_Player_Aimrate.Clear();
+	func_Player_HP.Clear();
 	func_Player_Magazine.Unbind();
 	WeaponSlot.Reset();
 
@@ -62,6 +79,9 @@ void ATPSPortfolioCharacter::initialize()
 	GetCharacterMovement()->MaxWalkSpeed = 0.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 750.f;
+	GetCharacterMovement()->SetNetAddressable();
+	GetCharacterMovement()->SetIsReplicated(true);
+
 
 	vChangeDirection = GetActorForwardVector();
 	vLerpDirection = vChangeDirection;
@@ -78,6 +98,8 @@ void ATPSPortfolioCharacter::initialize()
 	fBrakeTimer = 0.f;
 	fFrontAcos = 1.f;
 	iWeaponIndex = 0;
+	iMaxHealth = 10000;
+	iCurHealth = iMaxHealth;
 	bIsRun = true;
 	bIsSprint = false;
 	bIsMoving = false;
@@ -87,7 +109,7 @@ void ATPSPortfolioCharacter::initialize()
 	bIsEquiping = false;
 	bIsEvade = false;
 	bIsCrawl = false;
-	bIsCrawltoIdle = false;
+	bIsRecoverytoIdle = false;
 
 	//auto stState = new IdleState();
 	//auto stState = new IdleCharacterState(this);
@@ -99,6 +121,9 @@ void ATPSPortfolioCharacter::initialize()
 	vecState.emplace_back(make_unique<EvadeCharacterState>(this));
 
 	stCharacterState = vecState[0].get();
+
+	SetReplicateMovement(true);
+	SetReplicates(true);
 }
 
 void ATPSPortfolioCharacter::InitializeInputContext()
@@ -120,6 +145,12 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload.IA_Reload"), &ReloadAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Primary.IA_Primary"), &Weapon1Action);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Secondary.IA_Secondary"), &Weapon2Action);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Thirdary.IA_Thirdary"), &Weapon3Action);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Ragdoll.IA_Ragdoll"), &RagdollTestAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Heal.IA_Heal"), &HealAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Grenade.IA_Grenade"), &GrenadeAction);
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Interaction.IA_Interaction"), &InteractionAction);
+
 }
 
 void ATPSPortfolioCharacter::InitializeMeshComponent()
@@ -132,12 +163,15 @@ void ATPSPortfolioCharacter::InitializeMeshComponent()
 	{
 		GetMesh()->SetSkeletalMesh(FObj_Skmesh.Object);
 		GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+		vRagdollMeshLocation = GetMesh()->GetRelativeLocation();
 	}
 
 	ConstructorHelpers::FClassFinder<UAnimInstance> FObj_Anim(TEXT("Blueprint'/Game/Characters/PlayerCharacters/Vepley/ABP_Vepley.ABP_Vepley_C'"));
 	if (FObj_Anim.Succeeded())
 	{
 		GetMesh()->SetAnimInstanceClass(FObj_Anim.Class);
+		AnimationInstance = FObj_Anim.Class;
+		
 	}
 
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> FObj_Physics(TEXT("/Game/Characters/PlayerCharacters/Vepley/Mesh/Vepleysize10_Physics.Vepleysize10_Physics"));
@@ -146,6 +180,7 @@ void ATPSPortfolioCharacter::InitializeMeshComponent()
 		GetMesh()->SetPhysicsAsset(FObj_Physics.Object);
 		GetMesh()->SetSimulatePhysics(true);
 		GetMesh()->SetCollisionProfileName(TEXT("TPSCharacter"));
+		GetMesh()->SetGenerateOverlapEvents(true);
 	}
 }
 
@@ -153,6 +188,10 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 90.0f);
+	//GetCapsuleComponent()->SetGenerateOverlapEvents(true);
+	//GetCapsuleComponent()->SetHiddenInGame(false);
+	GetCapsuleComponent()->SetGenerateOverlapEvents(false);
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -167,6 +206,49 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 
 	pInventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
 	FootIK = CreateDefaultSubobject<UC_FootIK>(TEXT("FootIK"));
+	FootIK->SetIsReplicated(true);
+
+	pStimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("PerceptionStimuli"));
+	pStimuliSource->bAutoRegister = true;
+
+	#pragma region MinimapCameraSpringArm
+	MinimapCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	MinimapCameraBoom->SetupAttachment(RootComponent);
+	MinimapCameraBoom->SetWorldRotation(FRotator::MakeFromEuler(FVector(0.f, -90.f, 0.f)));
+	MinimapCameraBoom->bUsePawnControlRotation = false;
+	MinimapCameraBoom->bInheritPitch = false;
+	MinimapCameraBoom->bInheritRoll = false;
+	MinimapCameraBoom->bInheritYaw = false;
+	#pragma endregion
+
+	#pragma region MinimapCamera(SeceneCaptureComponent)
+	MinimapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("MinimapCapture"));
+	MinimapCapture->SetupAttachment(MinimapCameraBoom);
+	MinimapCapture->ProjectionType = ECameraProjectionMode::Orthographic;
+	MinimapCapture->CaptureSource = ESceneCaptureSource::SCS_SceneColorSceneDepth;
+	MinimapCapture->OrthoWidth = 3072;
+	ConstructorHelpers::FObjectFinder<UCanvasRenderTarget2D> FOBJ_RenderTarget2D(TEXT("Script/Engine.CanvasRenderTarget2D'/Game/UI/MinimapRenderTarget2D.MinimapRenderTarget2D'"));
+	if (FOBJ_RenderTarget2D.Succeeded())
+	{
+		MinimapCapture->TextureTarget = FOBJ_RenderTarget2D.Object;
+	}
+	#pragma endregion
+
+	#pragma region MinimapSprite
+	MinimapSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("MinimapSprite"));
+	MinimapSprite->SetupAttachment(RootComponent);
+	MinimapSprite->SetWorldRotation(FRotator::MakeFromEuler(FVector(90.f, 0.f, -90.f)));
+	MinimapSprite->SetWorldScale3D(FVector(0.5f));
+	MinimapSprite->SetWorldLocation(FVector(0.f,0.f,300.f));
+	MinimapSprite->bVisibleInSceneCaptureOnly = true;
+
+	ConstructorHelpers::FObjectFinder<UPaperSprite> FOBJ_PaperSprite(TEXT("/Script/Paper2D.PaperSprite'/Game/UI/Textures/CharacterMark_Sprite.CharacterMark_Sprite'"));
+	if (FOBJ_PaperSprite.Succeeded())
+	{
+		MinimapSprite->SetSprite(FOBJ_PaperSprite.Object);
+	}
+	#pragma endregion
+
 }
 
 void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
@@ -175,6 +257,40 @@ void ATPSPortfolioCharacter::IAFactory(FString address, UInputAction** uiaction)
 	(*address);
 	if (IA_Action.Succeeded())
 		*uiaction = IA_Action.Object;
+}
+
+AWorldItem* ATPSPortfolioCharacter::NearItemCheck()
+{
+	TArray<AActor*> TA_Actor;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWorldItem::StaticClass(), TA_Actor);
+	if(TA_Actor.IsEmpty()) return nullptr;
+
+	AActor* NearActor = nullptr;
+	float fDist = 200.f;
+	FVector vCharacterLoc = GetActorLocation();
+	for (auto elem_TA : TA_Actor)
+	{
+		if(!IsValid(elem_TA)) continue;
+		Cast<AWorldItem>(elem_TA)->ObtainRangeIn(false);
+		float fLen = (vCharacterLoc - elem_TA->GetActorLocation()).Length();
+		if (fLen < fDist)
+		{
+			fDist = fLen;
+			NearActor = elem_TA;
+		}
+	}
+
+	if (NearActor != nullptr)
+	{
+		AWorldItem* pItem = Cast<AWorldItem>(NearActor);
+		if (pItem)
+		{
+			pItem->ObtainRangeIn(true);
+			return pItem;
+		}
+			
+	}
+	return nullptr;
 }
 
 void ATPSPortfolioCharacter::BeginPlay()
@@ -193,9 +309,9 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 
 	FName WeaponSocket(TEXT("r_hand_rifle"));
-	WeaponSlot.Emplace(pInventory->LoadWeapon(0));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
+	WeaponSlot.Emplace(pInventory->LoadWeapon(3));
 	
 	for (auto elem : WeaponSlot)
 	{
@@ -203,10 +319,18 @@ void ATPSPortfolioCharacter::BeginPlay()
 		elem->SetHide(true);
 	}
 		
-
 	pCurWeapon = WeaponSlot[0];
 	pCurWeapon->SetHide(false);
 	pCurWeapon->SetPlayer(this);
+
+	pCurSubWeapon = pInventory->LoadWeapon(4, true);
+	if (pCurSubWeapon)
+	{
+		pCurSubWeapon->SetPlayer(this);
+		UE_LOG(LogTemp,Log,TEXT("SubWeapon Created"));
+	}
+		
+
 	//pCurWeapon = GetWorld()->SpawnActor<AWeapon>(FVector::ZeroVector, FRotator::ZeroRotator);
 
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
@@ -219,12 +343,13 @@ void ATPSPortfolioCharacter::BeginPlay()
 		if (IsValid(TPSController->CrossHairHUDWidget))
 		{
 			Cast<UCrossHair>(TPSController->CrossHairHUDWidget)->BindUserAimRate(this);
-			
 		}	
 		if (IsValid(TPSController->CharacterHUDWidget))
 		{
 			Cast<UCharacterHUD>(TPSController->CharacterHUDWidget)->BindUserData(this);
 		}
+		if(IsValid(TPSController->DamagedHUDWidget))
+			Cast<UHitDirection>(TPSController->DamagedHUDWidget)->BindUserData(this);
 	}
 
 	if (func_Player_Aimrate.IsBound())
@@ -236,7 +361,54 @@ void ATPSPortfolioCharacter::BeginPlay()
 			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
 		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
 	}
+
+	if (IsValid(pCurSubWeapon))
+	{
+		func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
+	}
 	
+	//AISight 탐지를 위한 스티뮬라이 추가
+	pStimuliSource->RegisterForSense(UAISense_Sight::StaticClass());
+	pStimuliSource->RegisterWithPerceptionSystem();
+
+	if (IsValid(MinimapCapture))
+	{
+		//지형과 스태틱매시, 표시용 Sprite만 캡쳐
+		MinimapCapture->ShowFlags.SetAntiAliasing(false);
+		MinimapCapture->ShowFlags.SetAtmosphere(false);
+		MinimapCapture->ShowFlags.SetBSP(false);
+		MinimapCapture->ShowFlags.SetCloud(false);
+		MinimapCapture->ShowFlags.SetDecals(false);
+		MinimapCapture->ShowFlags.SetFog(false);
+		MinimapCapture->ShowFlags.SetParticles(false);
+		MinimapCapture->ShowFlags.SetSkeletalMeshes(false);
+		MinimapCapture->ShowFlags.SetDeferredLighting(false);
+		MinimapCapture->ShowFlags.SetInstancedFoliage(false);
+		MinimapCapture->ShowFlags.SetInstancedGrass(false);
+		MinimapCapture->ShowFlags.SetInstancedStaticMeshes(false);
+		MinimapCapture->ShowFlags.SetNaniteMeshes(false);
+		MinimapCapture->ShowFlags.SetTextRender(false);
+		MinimapCapture->ShowFlags.SetTemporalAA(false);
+		MinimapCapture->ShowFlags.SetBloom(false);
+		MinimapCapture->ShowFlags.SetEyeAdaptation(false);
+		MinimapCapture->ShowFlags.SetLocalExposure(false);
+		MinimapCapture->ShowFlags.SetMotionBlur(false);
+		MinimapCapture->ShowFlags.SetToneCurve(false);
+		MinimapCapture->ShowFlags.SetSkyLighting(false);
+		MinimapCapture->ShowFlags.SetAmbientOcclusion(false);
+		MinimapCapture->ShowFlags.SetDynamicShadows(false);
+		MinimapCapture->ShowFlags.SetAmbientCubemap(false);
+		MinimapCapture->ShowFlags.SetDistanceFieldAO(false);
+		MinimapCapture->ShowFlags.SetLightFunctions(false);
+		MinimapCapture->ShowFlags.SetLightShafts(false);
+		MinimapCapture->ShowFlags.SetReflectionEnvironment(false);
+		MinimapCapture->ShowFlags.SetScreenSpaceReflections(false);
+		MinimapCapture->ShowFlags.SetTexturedLightProfiles(false);
+		MinimapCapture->ShowFlags.SetVolumetricFog(false);
+	}
+
+	int32 iHealBoxCnt = pInventory->AddItem(itemkey::HealBox50, 3);
+	func_Player_HealBox.ExecuteIfBound(iHealBoxCnt);
 }
 
 void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
@@ -245,6 +417,13 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 	Timer(DeltaSeconds);
 	CameraControl(DeltaSeconds);
 	UpdateState(DeltaSeconds);
+
+	if (bIsRagdoll)
+	{
+		FVector vRagdollposition = GetMesh()->GetComponentLocation();
+		GetCapsuleComponent()->SetWorldLocation(FVector(vRagdollposition.X, vRagdollposition.Y, vRagdollposition.Z- vRagdollMeshLocation.Z) );
+	
+	}
 }
 
 ECharacterState ATPSPortfolioCharacter::GetCharacterState()
@@ -260,6 +439,113 @@ EWeaponType ATPSPortfolioCharacter::GetWeaponType()
 
 	return pCurWeapon->GetWeaponType();
 }
+
+float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float fDmg = Super::TakeDamage(Damage,DamageEvent,EventInstigator,DamageCauser);
+
+	
+	//포인트 데미지
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* RadialDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+
+		
+	}
+	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
+	{
+		const FRadialDamageEvent* RadialDamageEvent = static_cast<const FRadialDamageEvent*>(&DamageEvent);
+
+		FVector vSrc = RadialDamageEvent->Origin;
+		FVector vDst = GetActorLocation();
+		FVector vDirection = (vDst - vSrc).GetSafeNormal();
+		vDirection.Z = 0.4f;
+
+		UE_LOG(LogTemp, Log, TEXT("CharacterDmg : %f"), fDmg);
+
+		if (fDmg > 2000.f)
+			Ragdoll();
+
+		AddMovementInput(FVector::UpVector, 10.f);
+		GetCharacterMovement()->AddImpulse(vDirection * (fDmg / 4.f), true);
+	
+	}
+
+	iCurHealth -= ceil(fDmg);
+
+	if(func_Player_HP.IsBound())
+		func_Player_HP.Broadcast(float(iCurHealth) / iMaxHealth);
+
+	if(iCurHealth <= 0)
+		Ragdoll();
+
+	SetHit(true);
+
+	FVector vMyActor = GetActorLocation();
+	FVector vCauserActor = DamageCauser->GetActorLocation();
+	FVector vHitDirection = (DamageCauser->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->SpawnEffect(Eff_key::BloodEffect, GetWorld(), vMyActor + vHitDirection * 50.f, vHitDirection.Rotation());
+		pInstance->StartSoundLocation(sound_key::Hurt1,GetWorld(),vMyActor,ESoundAttenuationType::SOUND_SILENCE);
+	}
+
+	if (ATPSPlayerController* TPSController = Cast<ATPSPlayerController>(Controller))
+	{
+		//degree -180 ~ 180
+		//fowardvector 기준으로
+		FVector vControll = GetControlVector(true);
+		vControll.Z = 0.f;
+		vHitDirection.Z = 0.f;
+		float fHitDegree = CalculateDegree(vControll, vHitDirection);
+		
+		TPSController->SetAngleHitUI(fHitDegree);
+	}
+
+	return fDmg;
+}
+
+void ATPSPortfolioCharacter::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+{
+	Super::NotifyHit(MyComp,Other,OtherComp,bSelfMoved,HitLocation,HitNormal,NormalImpulse,Hit);
+
+	if (OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Hit Static"));
+		if (bIsRagdoll)
+		{
+			if(!GetWorldTimerManager().IsTimerActive(Ragdolltimehandle))
+				GetWorldTimerManager().SetTimer(Ragdolltimehandle, [this](){RagdollComplete();}, 2.f,false);
+		}
+	}
+}
+
+void ATPSPortfolioCharacter::NotifyActorBeginOverlap(AActor* OtherActor)
+{
+	Super::NotifyActorBeginOverlap(OtherActor);
+	UE_LOG(LogTemp, Log, TEXT("OnOverlapActor"));
+	if (IsValid(OtherActor))
+	{
+		if (OtherActor->IsA(AEnemy::StaticClass()))
+		{
+			AEnemy* pEnemy = Cast<AEnemy>(OtherActor);
+			int32 iDmg = pEnemy->GetDmg();
+			UGameplayStatics::ApplyDamage(this,iDmg, pEnemy->GetController(),OtherActor, NULL);
+			
+			FVector vSrc = pEnemy->GetActorLocation();
+			FVector vDst = GetActorLocation();
+
+			FVector vDirect = (vDst - vSrc).GetSafeNormal();
+			vDirect.Z = 0.3;
+			GetCharacterMovement()->AddImpulse(vDirect* 100.f,true);
+
+			pEnemy->DmgCapsuleActive(false);
+		}
+	}
+}
+
 
 FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
 {
@@ -339,8 +625,25 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 		EnhancedInputComponent->BindAction(Weapon1Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangePrimary);
 		EnhancedInputComponent->BindAction(Weapon2Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangeSecondary);
+		EnhancedInputComponent->BindAction(Weapon3Action, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::WeaponChangeThirdary);
+
+		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Ragdoll);
+		EnhancedInputComponent->BindAction(RagdollTestAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::RagdollComplete);
+
+		EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::UseHeal);
+
+		EnhancedInputComponent->BindAction(GrenadeAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::UseGrenade);
+		EnhancedInputComponent->BindAction(GrenadeAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::UseGrenadeComplete);
+
+		EnhancedInputComponent->BindAction(InteractionAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Interaction);
 
 	}
+
+}
+
+void ATPSPortfolioCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 }
 
@@ -366,7 +669,15 @@ void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 		//움직임에 따른 회전 방향값 지정
 		SetMoveDirection(ForwardDirection, RightDirection, MovementVector);
 		SetIsMoving(true);
+
+		if (bIsRecoverytoIdle)
+		{
+			ChangeState(ECharacterState::IDLE);
+			return;
+		}
+			
 		ChangeState(bIsSprint ? ECharacterState::SPRINT : ECharacterState::RUN);
+
 	}
 }
 
@@ -376,7 +687,7 @@ void ATPSPortfolioCharacter::MoveComplete()
 	if (nullptr == stCharacterState)return;
 	if (stCharacterState->eState == ECharacterState::RUN ||
 		stCharacterState->eState == ECharacterState::SPRINT)
-	ChangeState(ECharacterState::IDLE);
+		ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
@@ -401,10 +712,10 @@ void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
 
 void ATPSPortfolioCharacter::Aim()
 {
-	if (bIsCrawltoIdle) {
+	if (bIsRecoverytoIdle) {
 		if(nullptr != stCharacterState &&
 			stCharacterState->eState == ECharacterState::AIM)
-		ChangeState(ECharacterState::IDLE);
+			ChangeState(ECharacterState::IDLE);
 		return;
 	}
 	ChangeState(ECharacterState::AIM);
@@ -413,7 +724,7 @@ void ATPSPortfolioCharacter::Aim()
 void ATPSPortfolioCharacter::AimComplete()
 {
 	if(stCharacterState->eState != ECharacterState::EVADE)
-	ChangeState(ECharacterState::IDLE);
+		ChangeState(ECharacterState::IDLE);
 }
 
 void ATPSPortfolioCharacter::Attack()
@@ -463,12 +774,33 @@ void ATPSPortfolioCharacter::Evade()
 {
 	if (bIsCrawl)
 	{
-		if(!bIsCrawltoIdle)
-			bIsCrawltoIdle = true;
+		if(!bIsRecoverytoIdle)
+			bIsRecoverytoIdle = true;
 		return;
 	}
-
+	
 	ChangeState(ECharacterState::EVADE);
+}
+
+void ATPSPortfolioCharacter::Ragdoll()
+{
+	bIsRagdoll = true;
+	bIsRecoverytoIdle = true;
+	GetMesh()->SetAllBodiesSimulatePhysics(true);
+}
+
+void ATPSPortfolioCharacter::RagdollComplete()
+{
+	GetMesh()->GetAnimInstance()->SavePoseSnapshot(FName("Ragdoll"));
+	bIsLayingOnBack = abs(GetMesh()->GetSocketRotation(FName("Hips")).Roll) < 90.f;
+
+	bIsRagdoll = false;
+	GetMesh()->SetAllBodiesSimulatePhysics(false);
+	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform, FName(""));
+	GetMesh()->SetRelativeLocationAndRotation(vRagdollMeshLocation, FRotator(0.f, 270.f, 0.f));
+
+	if(Ragdolltimehandle.IsValid())
+	GetWorldTimerManager().ClearTimer(Ragdolltimehandle);
 }
 
 void ATPSPortfolioCharacter::EvadeComplete()
@@ -504,6 +836,61 @@ void ATPSPortfolioCharacter::WeaponChangeSecondary()
 
 	iWeaponIndex = 2;
 	bIsEquiping = true;
+}
+
+void ATPSPortfolioCharacter::WeaponChangeThirdary()
+{
+	if (bIsEquiping) return;
+
+	iWeaponIndex = 3;
+	bIsEquiping = true;
+}
+
+void ATPSPortfolioCharacter::UseHeal()
+{
+	if(!IsValid(pInventory)) return;
+
+	bIsHeal = true;
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::Bandage, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
+}
+
+void ATPSPortfolioCharacter::UseGrenade()
+{
+	if(!IsValid(pCurSubWeapon)) return;
+
+	pCurSubWeapon->ArcTrace();
+	Aim();
+}
+
+void ATPSPortfolioCharacter::UseGrenadeComplete()
+{
+	if (!IsValid(pCurSubWeapon)) return;
+
+	bIsGrenade = true;
+}
+
+void ATPSPortfolioCharacter::Interaction()
+{
+	AWorldItem* pItem = NearItemCheck();
+	if(IsValid(pItem))
+		pItem->ObtainItem(this);
+}
+
+void ATPSPortfolioCharacter::UseGrenadeEnd()
+{
+	if (!IsValid(pCurSubWeapon)) return;
+
+	pCurSubWeapon->ArcAttack();
+	AimComplete();
+
+	if (IsValid(pCurSubWeapon))
+	{
+		func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
+	}
 }
 
 void ATPSPortfolioCharacter::SetMoveDirection(const FVector& vFoward, const FVector& vRight, const FVector2D& vMoveVector)
@@ -590,6 +977,8 @@ void ATPSPortfolioCharacter::CameraControl(float DeltaSeconds)
 		return;
 	}
 
+	if (nullptr == Controller) return;
+
 	//카메라 컴포넌트포지션
 	FVector vecWorldLocation = FollowCamera->GetComponentLocation();
 	//카메라 로테이션
@@ -661,25 +1050,19 @@ void ATPSPortfolioCharacter::SetBraking(float fTime)
 
 void ATPSPortfolioCharacter::NotifyEquip()
 {
-	switch (iWeaponIndex)
-	{
-	case 1: SetPrimaryEquip(); 
-		break;
-	case 2: SetSecondaryEquip();
-		break;
-	}
+	SetEquip(iWeaponIndex);
 }
 
-void ATPSPortfolioCharacter::SetPrimaryEquip()
+void ATPSPortfolioCharacter::SetEquip(int32 idx)
 {
-	if (WeaponSlot.Num() < 1) return;
+	if (WeaponSlot.Num() < idx) return;
 
 	if (IsValid(pCurWeapon))
 	{
 		pCurWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		pCurWeapon->SetHide(true);
 
-		bool bIsSame = pCurWeapon == WeaponSlot[0];
+		bool bIsSame = pCurWeapon == WeaponSlot[idx-1];
 
 		pCurWeapon = nullptr;
 		
@@ -688,46 +1071,10 @@ void ATPSPortfolioCharacter::SetPrimaryEquip()
 
 	
 
-	pCurWeapon = WeaponSlot[0];
+	pCurWeapon = WeaponSlot[idx-1];
 
 	FName WeaponSocket = TEXT("r_hand_rifle");
 	
-	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
-	{
-		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
-		pCurWeapon->SetHide(false);
-	}
-
-	if (IsValid(pCurWeapon))
-	{
-		if (func_Player_Bullet.IsBound())
-			func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
-		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
-	}
-}
-
-void ATPSPortfolioCharacter::SetSecondaryEquip()
-{
-	if (WeaponSlot.Num() < 2) return;
-
-	if (IsValid(pCurWeapon))
-	{
-		pCurWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		pCurWeapon->SetHide(true);
-		
-		bool bIsSame = pCurWeapon == WeaponSlot[1];
-		
-		pCurWeapon = nullptr;
-
-		if(bIsSame) return;
-	}
-
-	
-
-	pCurWeapon = WeaponSlot[1];
-
-	FName WeaponSocket = TEXT("r_hand_rifle");
-
 	if (GetMesh()->DoesSocketExist(WeaponSocket) && pCurWeapon != nullptr)
 	{
 		pCurWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
@@ -763,6 +1110,10 @@ void ATPSPortfolioCharacter::Timer(float DeltaSeconds)
 	{
 		ChangeState(ECharacterState::IDLE);
 	}
+
+	if(fNearItemChecktime < 1.f) fNearItemChecktime+= DeltaSeconds;
+	if(fNearItemChecktime >= 1.f)
+		NearItemCheck();
 }
 
 void ATPSPortfolioCharacter::SlideGround(float DeltaSeconds)
@@ -795,8 +1146,7 @@ void ATPSPortfolioCharacter::ChangeState(ECharacterState eChangeState)
 		stCharacterState->Enter();
 		break;
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("ChangeState : %i"), eChangeState);
+	UE_LOG(LogTemp, Log, TEXT("ChangeState: %i"), eChangeState);
 }
 
 bool ATPSPortfolioCharacter::CanChangeState(ECharacterState changestate)
@@ -819,6 +1169,21 @@ bool ATPSPortfolioCharacter::CanChangeState(ECharacterState changestate)
 	return true;
 }
 
+void ATPSPortfolioCharacter::RPC_ChangeState(ECharacterState eChangeState)
+{
+	ServerRPC_ChangeState(eChangeState);
+}
+
+void ATPSPortfolioCharacter::ServerRPC_ChangeState_Implementation(ECharacterState eChangeState)
+{
+	MulticastRPC_ChangeState(eChangeState);
+}
+
+void ATPSPortfolioCharacter::MulticastRPC_ChangeState_Implementation(ECharacterState eChangeState)
+{
+	ChangeState(eChangeState);
+}
+
 void ATPSPortfolioCharacter::PlayAttack(bool ismelee)
 {
 	if (bIsCrawl) return;
@@ -839,7 +1204,20 @@ void ATPSPortfolioCharacter::PlayAttack(bool ismelee)
 void ATPSPortfolioCharacter::SetCrawlEnd()
 {
 	bIsCrawl = false;
-	bIsCrawltoIdle = false;
+	bIsRecoverytoIdle = false;
+}
+
+void ATPSPortfolioCharacter::HealEnd()
+{
+	bIsHeal = false;
+	int32 iHealBoxCnt = pInventory->UseItem(itemkey::HealBox50, 1);
+	func_Player_HealBox.ExecuteIfBound(iHealBoxCnt);
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->SpawnEffect(Eff_key::HealEffect, GetWorld(), GetActorLocation(), GetActorRotation());
+		pInstance->StartSoundLocation(sound_key::HealEffect, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
 }
 
 FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
@@ -847,5 +1225,72 @@ FRotator ATPSPortfolioCharacter::GetFootRotator(bool left)
 	if (!IsValid(FootIK)) return FRotator::ZeroRotator;
 
 	return Cast<UC_FootIK>(FootIK)->GetFootIK(left);
+}
+
+void ATPSPortfolioCharacter::StimulusNoiseEvent()
+{
+	UAISense_Hearing::ReportNoiseEvent(GetWorld(), GetActorLocation(), 1.f, this, 0.f, ai_tag::noise_tag);
+}
+
+void ATPSPortfolioCharacter::SetEffectItem(EItemEffType efftype, float feff, int32 ieff)
+{
+	switch (efftype)
+	{
+		case EItemEffType::STAT_HP :
+			iCurHealth += ieff;
+			iCurHealth += iMaxHealth * (feff / 100.f);
+			iCurHealth = FMath::Clamp(iCurHealth, 0,iMaxHealth);
+			if (func_Player_HP.IsBound())
+				func_Player_HP.Broadcast(float(iCurHealth) / iMaxHealth);
+		break;
+	}
+}
+
+void ATPSPortfolioCharacter::AddItem(int32 idx, int32 cnt)
+{
+	if(!IsValid(pInventory)) return;
+
+
+	switch (idx)
+	{
+	case 1://Grenade
+		if(!IsValid(pCurSubWeapon)) return;
+		pCurSubWeapon->AddAmmo(false, cnt);
+		if (IsValid(pCurSubWeapon))
+		{
+			func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
+		}
+	break;
+	case 2://Ammo
+		for (auto& elem_Array : WeaponSlot)
+		{
+			if(!IsValid(elem_Array)) return;
+			if(elem_Array->IsPrimaryWeapon())
+				elem_Array->AddAmmo(true, cnt);
+		}
+		func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
+	break;
+	case itemkey::HealBox50:
+		int32 iHealBoxCnt = pInventory->AddItem(itemkey::HealBox50, cnt);
+		func_Player_HealBox.ExecuteIfBound(iHealBoxCnt);
+	break;
+	}
+
+}
+
+void ATPSPortfolioCharacter::LoadWeapon(int32 weaponidx)
+{
+	if(!IsValid(pInventory)) return;
+
+	for (auto& elem_Array : WeaponSlot)
+	{
+		if (elem_Array->GetItemKey() == weaponidx)
+		{
+			elem_Array->AddAmmo(true, 1);
+			return;
+		}
+	}
+	
+	WeaponSlot.Emplace(pInventory->LoadWeapon(weaponidx));
 }
 

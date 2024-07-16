@@ -22,6 +22,8 @@ DECLARE_MULTICAST_DELEGATE(FOnCrawlEnd);
 DECLARE_MULTICAST_DELEGATE(FOnFootstep_L);
 DECLARE_MULTICAST_DELEGATE(FOnFootstep_R);
 DECLARE_MULTICAST_DELEGATE(FOnSwosh);
+DECLARE_MULTICAST_DELEGATE(FOnHealing);
+DECLARE_MULTICAST_DELEGATE(FOnGrenadeEnd);
 
 UCLASS()
 class TPSPORTFOLIO_API UTPSAnimInstance : public UAnimInstance
@@ -48,11 +50,16 @@ private:
 	void PlaySprint(EWeaponType weapontype);
 	void PlayIdle(EWeaponType weapontype);
 	void PlayMelee(EWeaponType weapontype);
+	void PlayHit();
+	void PlayHeal();
+	void PlayGrenade();
 
 	void BlendOutReload(class UAnimMontage*, bool interrupt);
 	void BlendOutShot(class UAnimMontage*, bool interrupt);
 	void BlendOutEquip(class UAnimMontage*, bool interrupt);
 	void BlendOutMelee(class UAnimMontage*, bool interrupt);
+	void BlendOutHit(class UAnimMontage*, bool interrupt);
+	void BlendOutThrow(class UAnimMontage*, bool interrupt);
 
 	UFUNCTION()
 	void AnimNotify_WeaponSet();
@@ -68,6 +75,12 @@ private:
 	void AnimNotify_Footstep_R();
 	UFUNCTION()
 	void AnimNotify_Swosh();
+	UFUNCTION()
+	void AnimNotify_Healing();
+	UFUNCTION()
+	void AnimNotify_GrenadeEnd();
+
+
 private:
 	UPROPERTY()
 	TWeakObjectPtr<ATPSPortfolioCharacter> pCharacter;
@@ -86,4 +99,6 @@ private:
 	FOnFootstep_L OnFootstep_L;
 	FOnFootstep_R OnFootstep_R;
 	FOnSwosh OnSwosh;
+	FOnHealing OnHealing;
+	FOnGrenadeEnd OnGrenadeEnd;
 };

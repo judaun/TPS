@@ -1,5 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#include "Inventory.h"
 #include "TPSGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "TPSDataTable.h"
@@ -7,7 +8,7 @@
 #include "TPSEnum.h"
 #include "Equipment.h"
 #include "AWeapon.h"
-#include "Inventory.h"
+#include "TPSPortfolioCharacter.h"
 
 // Sets default values for this component's properties
 UInventory::UInventory()
@@ -108,23 +109,64 @@ void UInventory::AddItem(FItemTable* itemdata, int32 itemcnt)
 	}
 }
 
+int32 UInventory::AddItem(int32 itemkey, int32 itemcnt)
+{
+	for (auto& map_elem : mInventory)
+	{
+		for (auto& array_elem : map_elem.Value)
+		{
+			if (array_elem->GetItemKey() == itemkey)
+			{
+				array_elem->AddCount(itemcnt);
+				return array_elem->GetCount();
+			}
+		}
+	}
+	return -1;
+}
+
 bool UInventory::UseItem(FItemTable* itemdata, int32 itemcnt)
 {
 	auto TA_Item = mInventory.Find(itemdata->ItemType);
 	if (nullptr == TA_Item) return false;
+	if(!IsValid(GetOwner())) return false;
 
 	for (auto arrayelem : *TA_Item)
 	{
 		if (arrayelem->GetItemKey() != itemdata->Itemkey) continue;	
 		if (arrayelem->GetCount() < itemcnt) return false;
 		
+		Cast<ATPSPortfolioCharacter>(GetOwner())->SetEffectItem(itemdata->EffectType, itemdata->PercentageValue, itemdata->Value);
 		arrayelem->SubtractCount(itemcnt);
+
 		return true;
 	}
 
 	return false;
 }
 
+
+int32 UInventory::UseItem(int32 itemkey, int32 itemcnt)
+{
+	if (!IsValid(GetOwner())) return -1;
+	for (auto& map_elem : mInventory)
+	{
+		for (auto& array_elem : map_elem.Value)
+		{
+			if (array_elem->GetItemKey() == itemkey)
+			{
+				
+				FItemTable itemData = array_elem->GetItemData();
+				Cast<ATPSPortfolioCharacter>(GetOwner())->SetEffectItem(itemData.EffectType, itemData.PercentageValue, itemData.Value);
+				array_elem->SubtractCount(itemcnt);
+
+				return array_elem->GetCount();
+			}
+		}
+	}
+
+	return -1;
+}
 
 void UInventory::AddEquip(FEquipmentTable* equipdata)
 {
@@ -142,29 +184,27 @@ void UInventory::AddEquip(FEquipmentTable* equipdata)
 	}
 }
 
-AWeapon* UInventory::LoadWeapon(int32 weaponindex)
+AWeapon* UInventory::LoadWeapon(int32 weaponindex, bool issub)
 {
-	auto TA_Equip = mEquipInventory.Find(EEquipmentType::EQUIP_MAIN_WEAPON);
+	auto TA_Equip = mEquipInventory.Find(issub ? EEquipmentType::EQUIP_SUB_WEAPON : EEquipmentType::EQUIP_MAIN_WEAPON);
 	if (nullptr == TA_Equip) return nullptr;
-	if (TA_Equip->Num() < weaponindex + 1) return nullptr;
-
-	int32 iItemkey =(*TA_Equip)[weaponindex]->GetItemKey();
 	
-	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (nullptr == pGameInstance)
-		return nullptr;
-
-	FEquipmentTable* Itemdata = pGameInstance->GetEquipmentData(iItemkey);
-
-	FTransform SpawnTransform(FRotator::ZeroRotator, FVector::ZeroVector);
-	auto pWeapon = GetWorld()->SpawnActorDeferred<AWeapon>(AWeapon::StaticClass(), SpawnTransform);
-	if (pWeapon)
+	for (auto& elem_Array : *TA_Equip)
 	{
-		pWeapon->DeferredInitialize(Itemdata);
-		pWeapon->FinishSpawning(SpawnTransform);
+		if (elem_Array->GetItemKey() == weaponindex)
+		{
+			FTransform SpawnTransform(FRotator::ZeroRotator, FVector::ZeroVector);
+			auto pWeapon = GetWorld()->SpawnActorDeferred<AWeapon>(AWeapon::StaticClass(), SpawnTransform);
+			if (pWeapon)
+			{
+				pWeapon->DeferredInitialize(elem_Array->GetData(), issub);
+				pWeapon->FinishSpawning(SpawnTransform);
+			}
+
+			return pWeapon;
+		}
 	}
-	
-	return pWeapon;
+	return nullptr;
 }
 
 void UInventory::UnLoadWeapon(FEquipmentTable* equipdata)

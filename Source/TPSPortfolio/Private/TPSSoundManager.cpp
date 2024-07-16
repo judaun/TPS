@@ -96,6 +96,20 @@ void ATPSSoundManager::InitSound()
 	AddSound(TEXT("ShellSound3"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShellSound3.ShellSound3'"));
 	AddSound(TEXT("ShotShellSound"), TEXT("Script/Engine.SoundWave'/Game/Sounds/ShotShellSound.ShotShellSound'"));
 	AddSound(TEXT("MagazineDrop"), TEXT("Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'"));
+	AddSound(sound_key::HitMark,TEXT("/Script/Engine.SoundWave'/Game/Sounds/hitmark.hitmark'"));
+	AddSound(sound_key::KillMark, TEXT("/Script/Engine.SoundWave'/Game/Sounds/killmark.killmark'"));
+	AddSound(sound_key::Boom1,TEXT("/Script/Engine.SoundWave'/Game/Sounds/Boom1.Boom1'"));
+	AddSound(sound_key::MetalWalk, TEXT("/Script/Engine.SoundWave'/Game/Sounds/metalwalk.metalwalk'"));
+	AddSound(sound_key::Servo1, TEXT("/Script/Engine.SoundWave'/Game/Sounds/servo1.servo1'"));
+	AddSound(sound_key::Servo2, TEXT("/Script/Engine.SoundWave'/Game/Sounds/servo2.servo2'"));
+	AddSound(sound_key::RobotOff, TEXT("/Script/Engine.SoundWave'/Game/Sounds/RobotOff.RobotOff'"));
+	AddSound(sound_key::MachineJump, TEXT("/Script/Engine.SoundWave'/Game/Sounds/machinejump.machinejump'"));
+	AddSound(sound_key::Hurt1, TEXT("/Script/Engine.SoundWave'/Game/Sounds/hurt.hurt'"));
+	AddSound(sound_key::Cannon, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Cannon.Cannon'"));
+	AddSound(sound_key::ImpactGround, TEXT("/Script/Engine.SoundWave'/Game/Sounds/ImpactGround.ImpactGround'"));
+	AddSound(sound_key::Bandage, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Bandage.Bandage'"));
+	AddSound(sound_key::HealEffect, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Healing.Healing'"));
+	//
 	///Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'
 	AddSound(TEXT("FootStep_Ground_1"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_1.ground_1'"));
 	AddSound(TEXT("FootStep_Ground_2"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_2.ground_2'"));

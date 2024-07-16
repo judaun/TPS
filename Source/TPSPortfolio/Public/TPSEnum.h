@@ -52,7 +52,19 @@ UENUM(BlueprintType)
 enum class ECharacterState : uint8 { IDLE, RUN, SPRINT, BRAKE, AIM, EVADE };
 
 UENUM(BlueprintType)
+enum class EEnemyState : uint8
+{ 
+	SPAWN, IDLE, MOVE, ATTACK, DEAD, 
+};
+
+UENUM(BlueprintType)
 enum class EWeaponMontageState : uint8 
 { 
-	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, MELEE,
+	IDLE, RUN, AIM, SHOT, RELOAD, EQUIP, MELEE, HIT, HEAL, GRENADE_HOLD, GRENADE_THROW,
+};
+
+UENUM(BlueprintType)
+enum class EEnemyType : uint8
+{
+	ENEMY_ASSAULT, ENEMY_TANK, ENEMY_SCOUT,
 };

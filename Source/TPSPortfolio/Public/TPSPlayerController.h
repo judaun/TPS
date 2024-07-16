@@ -17,6 +17,8 @@ class TPSPORTFOLIO_API ATPSPlayerController : public APlayerController
 public:
 	ATPSPlayerController();
 	~ATPSPlayerController();
+
+	void SetAngleHitUI(float angle);
 public:
 	/* Reference to the UMG asset in the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
@@ -33,6 +35,12 @@ public:
 	/* Variable to hold the widget after creating it */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 		UUserWidget* CharacterHUDWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+		TSubclassOf<UUserWidget> DamagedHUDWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+		UUserWidget* DamagedHUDWidget;
 
 protected:
 	virtual void BeginPlay() override;

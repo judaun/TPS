@@ -18,6 +18,7 @@ public:
 public:
 	int32 GetItemKey() { return FEquipData.Itemkey; }
 	void SetData(FEquipmentTable* equipdata);
+	void SetData(FEquipmentTable equipdata);
 	FEquipmentTable GetData() { return FEquipData; }
 protected:
 	FEquipmentTable FEquipData;

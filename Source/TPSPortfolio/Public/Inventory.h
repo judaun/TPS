@@ -14,6 +14,13 @@ struct FEquipmentTable;
 enum class EItemType : uint8;
 enum class EEquipmentType : uint8;
 
+namespace itemkey
+{
+	int32 const HealBox10 = 1;
+	int32 const HealBox30 = 2;
+	int32 const HealBox50 = 3;
+}
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class TPSPORTFOLIO_API UInventory : public UActorComponent
 {
@@ -35,10 +42,12 @@ private:
 
 public:
 	void AddItem(FItemTable* itemdata, int32 itemcnt);
+	int32 AddItem(int32 itemkey, int32 itemcnt);
 	bool UseItem(FItemTable* itemdata, int32 itemcnt = 1);
+	int32 UseItem(int32 itemkey, int32 itemcnt);
 
 	void AddEquip(FEquipmentTable* equipdata);
-	AWeapon* LoadWeapon(int32 weaponindex);
+	AWeapon* LoadWeapon(int32 weaponindex, bool issub = false);
 	void UnLoadWeapon(FEquipmentTable* equipdata);
 private:
 	TMap<EItemType, TArray<TSharedPtr<Item>>> mInventory;

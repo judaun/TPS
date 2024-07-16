@@ -76,6 +76,41 @@ struct FEquipmentTable : public FTableRowBase
 	float fBaseReloadTime;
 };
 
+
+USTRUCT()
+struct FEnemyTable : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditAnywhere)
+	int32 Itemkey;
+
+	UPROPERTY(EditAnywhere)
+		FString Name;
+
+	UPROPERTY(EditAnywhere)
+		EEnemyType EnemyType;
+
+	UPROPERTY(EditAnywhere)
+		int32 Health;
+
+	UPROPERTY(EditAnywhere)
+		int32 Damage;
+
+	UPROPERTY(EditAnywhere)
+		float Speed;
+
+	UPROPERTY(EditAnywhere)
+		float DetectLength;
+
+	UPROPERTY(EditAnywhere)
+		float ProjectileDamage;
+
+	UPROPERTY(EditAnywhere)
+		float fAttInterval;
+};
+
+
 class TPSPORTFOLIO_API TPSDataTable
 {
 public:

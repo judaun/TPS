@@ -21,6 +21,7 @@ public:
 	void SubtractCount(int32 cnt) { iItemCnt -= cnt; }
 	int32 GetCount() { return iItemCnt; }
 	int32 GetItemKey() { return fItemData.Itemkey; }
+	FItemTable GetItemData() { return fItemData; }
 private:
 	FItemTable fItemData;
 	int32 iItemCnt;
