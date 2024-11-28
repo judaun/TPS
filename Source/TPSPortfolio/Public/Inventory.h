@@ -9,10 +9,14 @@
 class Item;
 class Equipment;
 class AWeapon;
+class UPlayerSkill;
+class AStratagem;
 struct FItemTable;
 struct FEquipmentTable;
+struct FSkillTable;
 enum class EItemType : uint8;
 enum class EEquipmentType : uint8;
+enum class ESkillType : uint8;
 
 namespace itemkey
 {
@@ -49,7 +53,13 @@ public:
 	void AddEquip(FEquipmentTable* equipdata);
 	AWeapon* LoadWeapon(int32 weaponindex, bool issub = false);
 	void UnLoadWeapon(FEquipmentTable* equipdata);
+
+	void AddSkill(FSkillTable* skilldata);
+	UPlayerSkill* LoadSkill(int32 skillindex);
+	AStratagem* LoadStratagem(int32 skillidx);
+	
 private:
 	TMap<EItemType, TArray<TSharedPtr<Item>>> mInventory;
 	TMap<EEquipmentType, TArray<TSharedPtr<Equipment>>> mEquipInventory;
+	TMap<ESkillType, TArray<TSharedPtr<UPlayerSkill>>> mSkillInventory;
 };

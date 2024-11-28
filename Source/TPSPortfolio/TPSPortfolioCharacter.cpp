@@ -39,6 +39,8 @@
 #include "Engine/CanvasRenderTarget2D.h"
 #include "PaperSprite.h"
 #include "WorldItem.h"
+#include "TPSGameSingleton.h"
+#include "Stratagem.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -97,6 +99,7 @@ void ATPSPortfolioCharacter::initialize()
 	fSprintSpeed = 800.f;
 	fBrakeTimer = 0.f;
 	fFrontAcos = 1.f;
+	fFlowfieldChecktime = 0.f;
 	iWeaponIndex = 0;
 	iMaxHealth = 10000;
 	iCurHealth = iMaxHealth;
@@ -150,7 +153,7 @@ void ATPSPortfolioCharacter::InitializeInputContext()
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Heal.IA_Heal"), &HealAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Grenade.IA_Grenade"), &GrenadeAction);
 	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Interaction.IA_Interaction"), &InteractionAction);
-
+	IAFactory(TEXT("/Game/ThirdPerson/Input/Actions/IA_Command.IA_Command"),&CommandAction);
 }
 
 void ATPSPortfolioCharacter::InitializeMeshComponent()
@@ -216,6 +219,7 @@ void ATPSPortfolioCharacter::InitializeDefaultComponent()
 	MinimapCameraBoom->SetupAttachment(RootComponent);
 	MinimapCameraBoom->SetWorldRotation(FRotator::MakeFromEuler(FVector(0.f, -90.f, 0.f)));
 	MinimapCameraBoom->bUsePawnControlRotation = false;
+	MinimapCameraBoom->TargetArmLength = 3000.f;
 	MinimapCameraBoom->bInheritPitch = false;
 	MinimapCameraBoom->bInheritRoll = false;
 	MinimapCameraBoom->bInheritYaw = false;
@@ -310,8 +314,8 @@ void ATPSPortfolioCharacter::BeginPlay()
 
 	FName WeaponSocket(TEXT("r_hand_rifle"));
 	WeaponSlot.Emplace(pInventory->LoadWeapon(1));
-	WeaponSlot.Emplace(pInventory->LoadWeapon(2));
-	WeaponSlot.Emplace(pInventory->LoadWeapon(3));
+	//WeaponSlot.Emplace(pInventory->LoadWeapon(2));
+	//WeaponSlot.Emplace(pInventory->LoadWeapon(3));
 	
 	for (auto elem : WeaponSlot)
 	{
@@ -346,7 +350,14 @@ void ATPSPortfolioCharacter::BeginPlay()
 		}	
 		if (IsValid(TPSController->CharacterHUDWidget))
 		{
-			Cast<UCharacterHUD>(TPSController->CharacterHUDWidget)->BindUserData(this);
+			pHud = TWeakObjectPtr<UCharacterHUD>(Cast<UCharacterHUD>(TPSController->CharacterHUDWidget));
+			if (pHud.Get())
+			{
+				pHud->BindUserData(this);
+				pHud->SetWeapon(WeaponSlot.Num(), WeaponSlot[0]->GetData().Name);
+				pHud->ChangeWeapon(WeaponSlot.Num());
+			}
+			
 		}
 		if(IsValid(TPSController->DamagedHUDWidget))
 			Cast<UHitDirection>(TPSController->DamagedHUDWidget)->BindUserData(this);
@@ -366,6 +377,29 @@ void ATPSPortfolioCharacter::BeginPlay()
 	{
 		func_Player_Grenade.ExecuteIfBound(pCurSubWeapon->GetCurrentBullet());
 	}
+
+	
+#pragma region Stratagem_Initialize
+	SkillSlot.Emplace(pInventory->LoadStratagem(1));
+	SkillSlot.Emplace(pInventory->LoadStratagem(2));
+	SkillSlot.Emplace(pInventory->LoadStratagem(3));
+
+		for(size_t i=0; i< SkillSlot.Num(); ++i)
+		{
+			SkillSlot[i]->SetCharacterOwner(this, i);
+			SkillSlot[i]->SetHide(true);
+
+			FSkillTable skilldata = SkillSlot[i]->GetSkillData();
+			pHud->SetSkillData(i, skilldata.Name, skilldata.Name, skilldata.Command);
+
+			//SkillSlot[i]->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+		}
+
+		//UseStratagemCommandComplete(0);
+
+#pragma endregion Stratagem_Initialize
+	
+
 	
 	//AISight 탐지를 위한 스티뮬라이 추가
 	pStimuliSource->RegisterForSense(UAISense_Sight::StaticClass());
@@ -385,8 +419,8 @@ void ATPSPortfolioCharacter::BeginPlay()
 		MinimapCapture->ShowFlags.SetDeferredLighting(false);
 		MinimapCapture->ShowFlags.SetInstancedFoliage(false);
 		MinimapCapture->ShowFlags.SetInstancedGrass(false);
-		MinimapCapture->ShowFlags.SetInstancedStaticMeshes(false);
-		MinimapCapture->ShowFlags.SetNaniteMeshes(false);
+		//MinimapCapture->ShowFlags.SetInstancedStaticMeshes(false);
+		//MinimapCapture->ShowFlags.SetNaniteMeshes(false);
 		MinimapCapture->ShowFlags.SetTextRender(false);
 		MinimapCapture->ShowFlags.SetTemporalAA(false);
 		MinimapCapture->ShowFlags.SetBloom(false);
@@ -417,6 +451,7 @@ void ATPSPortfolioCharacter::Tick(float DeltaSeconds)
 	Timer(DeltaSeconds);
 	CameraControl(DeltaSeconds);
 	UpdateState(DeltaSeconds);
+	UpdateFlowfield(DeltaSeconds);
 
 	if (bIsRagdoll)
 	{
@@ -482,7 +517,7 @@ float ATPSPortfolioCharacter::TakeDamage(float Damage, struct FDamageEvent const
 	SetHit(true);
 
 	FVector vMyActor = GetActorLocation();
-	FVector vCauserActor = DamageCauser->GetActorLocation();
+	
 	FVector vHitDirection = (DamageCauser->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 
 	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
@@ -607,6 +642,7 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Move);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::MoveComplete);
 
+
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::Look);
 
@@ -637,6 +673,10 @@ void ATPSPortfolioCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 		EnhancedInputComponent->BindAction(InteractionAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::Interaction);
 
+		EnhancedInputComponent->BindAction(CommandAction, ETriggerEvent::Triggered, this, &ATPSPortfolioCharacter::UseStratagemCommand);
+		EnhancedInputComponent->BindAction(CommandAction, ETriggerEvent::Completed, this, &ATPSPortfolioCharacter::UseStratagemCommandEnd);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Started, this, &ATPSPortfolioCharacter::InputSkillCommand);
+
 	}
 
 }
@@ -649,6 +689,7 @@ void ATPSPortfolioCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 void ATPSPortfolioCharacter::Move(const FInputActionValue& Value)
 {
+	if(CheckFlag(use_command)) return;
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
@@ -688,6 +729,8 @@ void ATPSPortfolioCharacter::MoveComplete()
 	if (stCharacterState->eState == ECharacterState::RUN ||
 		stCharacterState->eState == ECharacterState::SPRINT)
 		ChangeState(ECharacterState::IDLE);
+	else if(stCharacterState->eState == ECharacterState::AIM)
+		SetAimRate(ECharacterState::AIM);
 }
 
 void ATPSPortfolioCharacter::Look(const FInputActionValue& Value)
@@ -732,6 +775,12 @@ void ATPSPortfolioCharacter::Attack()
 	if (nullptr == pCurWeapon) return;
 	if (bIsEquiping || bIsEvade) return;
 
+	if (nullptr != pCurSkill)
+	{
+		UseStratagem();
+		return;
+	}
+
 	pCurWeapon->AttackStart();
 	if (func_Player_Bullet.IsBound())
 		func_Player_Bullet.Broadcast(pCurWeapon->GetCurrentBullet(), pCurWeapon->GetMaxBullet());
@@ -741,6 +790,12 @@ void ATPSPortfolioCharacter::AttackStart()
 {
 	if (nullptr == pCurWeapon) return;
 	if (bIsEquiping) return;
+
+	if (nullptr != pCurSkill)
+	{
+		UseStratagem();
+		return;
+	}
 
 	pCurWeapon->AttackStart();
 	if (func_Player_Bullet.IsBound())
@@ -753,7 +808,14 @@ void ATPSPortfolioCharacter::AttackStart()
 void ATPSPortfolioCharacter::AttackComplete()
 {
 	if (nullptr == pCurWeapon) return;
-	UE_LOG(LogTemp, Log, TEXT("AttackStop"));
+
+
+	if (nullptr != pCurSkill)
+	{
+		UseStratagemEnd();
+		return;
+	}
+
 	pCurWeapon->AttackStop();
 }
 
@@ -798,6 +860,7 @@ void ATPSPortfolioCharacter::RagdollComplete()
 	GetMesh()->SetAllBodiesSimulatePhysics(false);
 	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform, FName(""));
 	GetMesh()->SetRelativeLocationAndRotation(vRagdollMeshLocation, FRotator(0.f, 270.f, 0.f));
+	GetMesh()->SetSimulatePhysics(true);
 
 	if(Ragdolltimehandle.IsValid())
 	GetWorldTimerManager().ClearTimer(Ragdolltimehandle);
@@ -871,6 +934,128 @@ void ATPSPortfolioCharacter::UseGrenadeComplete()
 	if (!IsValid(pCurSubWeapon)) return;
 
 	bIsGrenade = true;
+}
+
+void ATPSPortfolioCharacter::InputSkillCommand(const FInputActionValue& Value)
+{
+	if(!CheckFlag(use_command)) return;
+
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::Click, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
+
+	FVector2D MovementVector = Value.Get<FVector2D>();
+	//TODO_1: MoveVector 값 X Y로 상하좌우 입력받아서 String값 넣고 SkillList에서 비교해가며 작동
+	strSkillCommand += MovementVector.X < 0 ? "1" :
+						MovementVector.X > 0 ? "4" :
+						MovementVector.Y > 0 ? "2" : "3";
+
+	int32 iIdx = CheckSkillCommand();
+	if(iIdx == -1)
+	return;
+
+	UseStratagemCommandComplete(iIdx);
+	//strSkillCommand
+}
+
+int32 ATPSPortfolioCharacter::CheckSkillCommand()
+{
+	int32 iCommandLen = strSkillCommand.Len();
+
+	for (int32 i = 0; i < SkillSlot.Num(); ++i)
+	{
+		FString str_SkillCommand = FString::FromInt(SkillSlot[i]->GetSkillCommand());
+
+		if(str_SkillCommand.Equals(strSkillCommand))
+		{ 
+			
+			return i;
+		}
+
+		str_SkillCommand = str_SkillCommand.Left(iCommandLen);
+
+		str_SkillCommand.Find(strSkillCommand) == string::npos ? 
+			pHud->CommandCheck(i,iCommandLen,false) : pHud->CommandCheck(i, iCommandLen, true);
+
+
+	}
+
+	return -1;
+}
+
+void ATPSPortfolioCharacter::UseStratagemCommand()
+{
+	if(nullptr != pCurSkill) return;
+
+	if (!CheckFlag(use_command)) 
+	{
+		func_Player_Coomandflag.ExecuteIfBound(true);
+		OnFlag(use_command);
+	}
+	//TODO_1: 방향키 입력
+	//TODO_2: 숫자로변환
+	//TODO_3: 인벤토리내 스킬 커맨드랑 비교
+	//TODO_4: UseStratagemCommandComplete 호출
+}
+
+void ATPSPortfolioCharacter::UseStratagemCommandEnd()
+{
+	//TODO_1: 커맨드 초기화
+	strSkillCommand = "";
+
+	OffFlag(use_command);
+	func_Player_Coomandflag.ExecuteIfBound(false);
+
+	for (int32 i = 0; i < SkillSlot.Num(); ++i)
+	{
+		pHud->CommandCheck(i, 5, false);
+	}
+}
+
+void ATPSPortfolioCharacter::UseStratagemCommandComplete(int32 index)
+{
+	UTPSGameInstance* pInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pInstance)
+	{
+		pInstance->StartSoundLocation(sound_key::Charge, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_SILENCE);
+	}
+
+	//커맨드랑 맞는 스트라타젬 지정
+	pCurSkill = SkillSlot[index];
+	pCurSkill->SetHide(false);
+	pCurSkill->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("r_hand_rifle"));
+	UseStratagemCommandEnd();
+}
+
+void ATPSPortfolioCharacter::UseStratagem()
+{
+	if (nullptr == pCurSkill) return;
+
+	//트레이스 생성
+	pCurSkill->ArcTrace();
+	//플레이어 액션 변경(조준상태)
+	Aim();
+}
+
+void ATPSPortfolioCharacter::UseStratagemEnd()
+{
+	if (nullptr == pCurSkill) return;
+
+	OnFlag(throw_attack);
+}
+
+void ATPSPortfolioCharacter::UseStratagemComplete()
+{
+	if (nullptr == pCurSkill) return;
+
+	OffFlag(throw_attack);
+	//스트라타잼 투척
+	pCurSkill->ArcAttack();
+	//상태초기화
+	AimComplete();
+	pCurSkill = nullptr;
 }
 
 void ATPSPortfolioCharacter::Interaction()
@@ -1069,7 +1254,10 @@ void ATPSPortfolioCharacter::SetEquip(int32 idx)
 		if(bIsSame) return;
 	}
 
-	
+	if (pHud.Get())
+	{
+		pHud->ChangeWeapon(idx);
+	}
 
 	pCurWeapon = WeaponSlot[idx-1];
 
@@ -1167,6 +1355,21 @@ bool ATPSPortfolioCharacter::CanChangeState(ECharacterState changestate)
 	}
 		
 	return true;
+}
+
+void ATPSPortfolioCharacter::UpdateFlowfield(float DeltaSeconds)
+{
+	if (fFlowfieldChecktime < 0.f)
+	{
+		fFlowfieldChecktime = 1.f;
+		UTPSGameSingleton& GameSingleton = UTPSGameSingleton::Get();
+		
+		FTransform mytrans = GetTransform();
+		GameSingleton.Update_FFPathDirection(mytrans);
+		//GameSingleton.DebugView_FFPathDirection(GetWorld());
+	}
+
+	fFlowfieldChecktime -= DeltaSeconds;
 }
 
 void ATPSPortfolioCharacter::RPC_ChangeState(ECharacterState eChangeState)
@@ -1287,10 +1490,30 @@ void ATPSPortfolioCharacter::LoadWeapon(int32 weaponidx)
 		if (elem_Array->GetItemKey() == weaponidx)
 		{
 			elem_Array->AddAmmo(true, 1);
+			func_Player_Magazine.ExecuteIfBound(pCurWeapon->GetMagazine());
 			return;
 		}
 	}
 	
-	WeaponSlot.Emplace(pInventory->LoadWeapon(weaponidx));
+	AWeapon* pWeapon = pInventory->LoadWeapon(weaponidx);
+	WeaponSlot.Emplace(pWeapon);
+	pWeapon->SetPlayer(this);
+	pWeapon->SetHide(true);
+
+	if (pHud.Get())
+	{
+		pHud->SetWeapon(WeaponSlot.Num(), WeaponSlot.Last()->GetData().Name);
+	}
+}
+
+void ATPSPortfolioCharacter::SkillCool(int32 key, float remaintime)
+{
+	for (int i=0; i<SkillSlot.Num(); ++i)
+	{
+		if (SkillSlot[i]->GetSkillKey() == key)
+		{
+			func_Player_SkillCool.ExecuteIfBound(i, remaintime);
+		}
+	}
 }
 

@@ -36,8 +36,15 @@ DECLARE_DELEGATE_OneParam(FDele_Player_Magazine, int32);
 DECLARE_DELEGATE_OneParam(FDele_Player_HealBox, int32);
 DECLARE_DELEGATE_OneParam(FDele_Player_Grenade, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FDele_Player_HP, float);
+DECLARE_DELEGATE_TwoParams(FDele_Player_SkillCool, int32, float);
+DECLARE_DELEGATE_OneParam(FDele_Player_CommandFlag, bool);
 
 class AWorldItem;
+class UCharacterHUD;
+class AStratagem;
+
+const unsigned char use_command = 1 << 0;
+const unsigned char throw_attack = 1 << 1;
 
 UCLASS(config=Game)
 class ATPSPortfolioCharacter : public ACharacter
@@ -125,6 +132,10 @@ class ATPSPortfolioCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* InteractionAction;
 
+	/** Interaction Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CommandAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Inventory, meta = (AllowPrivateAccess = "true"))
 	UInventory* pInventory;
 
@@ -179,6 +190,15 @@ protected:
 
 	void UseGrenade();
 	void UseGrenadeComplete();
+
+	/*Stratagem*/
+	void InputSkillCommand(const FInputActionValue& Value);
+	void UseStratagemCommand();
+	void UseStratagemCommandEnd();
+	void UseStratagemCommandComplete(int32 index);
+	void UseStratagem();
+	void UseStratagemEnd();
+
 	
 	void Interaction();
 
@@ -194,6 +214,8 @@ protected:
 	void UpdateState(float DeltaSeconds);
 	void ChangeState(ECharacterState eChangeState);
 	bool CanChangeState(ECharacterState changestate);
+
+	void UpdateFlowfield(float DeltaSeconds);
 	
 	UFUNCTION() void RPC_ChangeState(ECharacterState eChangeState);
 	UFUNCTION(Server, Reliable) void ServerRPC_ChangeState(ECharacterState eChangeState);
@@ -207,6 +229,9 @@ protected:
 
 	virtual void Tick(float DeltaSeconds);
 
+	
+
+	int32 CheckSkillCommand();
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -317,6 +342,7 @@ public:
 	void HealEnd();
 	void UseGrenadeEnd();
 	void GrenadeEnd() {bIsGrenade = false;}
+	void UseStratagemComplete();
 
 	FRotator GetFootRotator(bool left);
 
@@ -325,13 +351,20 @@ public:
 
 	void AddItem(int32 idx, int32 cnt);
 	void LoadWeapon(int32 weaponidx);
+	void SkillCool(int32 key, float remaintime);
 
+	void OnFlag(const unsigned char flag) { m_flag |= flag; }
+	void OffFlag(const unsigned char flag) { m_flag &= ~flag; }
+	void ToggleFlag(const unsigned char flag) { m_flag ^= flag; }
+	bool CheckFlag(const unsigned char flag) { return m_flag & flag; }
 private:
 	TPSCharacterState* stCharacterState;
 	vector<unique_ptr<TPSCharacterState>> vecState;
 	
 	FTimerHandle Ragdolltimehandle;
 	
+	TWeakObjectPtr<UCharacterHUD> pHud;
+
 	UPROPERTY()
 	TArray<AWeapon*> WeaponSlot;
 
@@ -340,6 +373,14 @@ private:
 
 	UPROPERTY()
 	AWeapon* pCurSubWeapon;
+
+	UPROPERTY()
+	TArray<AStratagem*> SkillSlot;
+	UPROPERTY()
+	AStratagem* pCurSkill;
+
+	FString strSkillCommand;
+	bool bIsUsingSkillCommand;
 
 	FVector vControlVectorX;
 	FVector vControlVectorY;
@@ -360,6 +401,7 @@ private:
 	float fBrakeTimer;
 	float fFrontAcos;
 	float fNearItemChecktime;
+	float fFlowfieldChecktime;
 
 	int32 iWeaponIndex;
 	int32 iCurHealth;
@@ -385,6 +427,8 @@ private:
 
 	bool bIsAttacking;
 	bool bIsReloading;
+
+	unsigned char m_flag = 0;
 public:
 	FDele_Player_Aimrate func_Player_Aimrate;
 	FDele_Player_Bullet func_Player_Bullet;
@@ -392,4 +436,6 @@ public:
 	FDele_Player_HealBox func_Player_HealBox;
 	FDele_Player_Grenade func_Player_Grenade;
 	FDele_Player_HP func_Player_HP;
+	FDele_Player_SkillCool func_Player_SkillCool;
+	FDele_Player_CommandFlag func_Player_Coomandflag;
 };

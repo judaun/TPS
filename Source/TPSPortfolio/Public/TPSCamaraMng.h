@@ -9,6 +9,7 @@
 namespace shake_key
 {
 	TCHAR* const Boom_Small = TEXT("Boom_Small");
+	TCHAR* const Boom_Big = TEXT("Boom_Big");
 }
 
 #define MAXDISTSHAKE 3000

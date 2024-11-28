@@ -109,6 +109,11 @@ void ATPSSoundManager::InitSound()
 	AddSound(sound_key::ImpactGround, TEXT("/Script/Engine.SoundWave'/Game/Sounds/ImpactGround.ImpactGround'"));
 	AddSound(sound_key::Bandage, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Bandage.Bandage'"));
 	AddSound(sound_key::HealEffect, TEXT("/Script/Engine.SoundWave'/Game/Sounds/Healing.Healing'"));
+	AddSound(sound_key::SteelHit, TEXT("/Script/Engine.SoundWave'/Game/Sounds/SteelHit.SteelHit'"));
+	AddSound(sound_key::Gatling, TEXT("/Script/Engine.SoundWave'/Game/Sounds/gatlingeffect.gatlingeffect'"));
+	AddSound(sound_key::Charge, TEXT("/Script/Engine.SoundWave'/Game/Sounds/gemcharge.gemcharge'"));
+	AddSound(sound_key::Click, TEXT("/Script/Engine.SoundWave'/Game/Sounds/button.button'"));
+	AddSound(sound_key::Deploy, TEXT("/Script/Engine.SoundWave'/Game/Sounds/deploy.deploy'"));
 	//
 	///Script/Engine.SoundWave'/Game/Sounds/MagazineDrop.MagazineDrop'
 	AddSound(TEXT("FootStep_Ground_1"), TEXT("/Script/Engine.SoundWave'/Game/Sounds/ground_1.ground_1'"));

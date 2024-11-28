@@ -83,7 +83,7 @@ void UAnimNotify_MorphTarget::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 		MorphTimeline.PlayFromStart();
 	}
 }
-
+#if WITH_EDITOR
 void UAnimNotify_MorphTarget::ValidateAssociatedAssets()
 {
 	static const FName NAME_AssetCheck("AssetCheck");
@@ -104,7 +104,7 @@ void UAnimNotify_MorphTarget::ValidateAssociatedAssets()
 		}
 	}
 }
-
+#endif
 void UAnimNotify_MorphTarget::OnMorphProgress(float morphvalue)
 {
 	if (MorphTargetName.IsNone())

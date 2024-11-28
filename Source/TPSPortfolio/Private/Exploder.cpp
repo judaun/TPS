@@ -60,7 +60,7 @@ void AExploder::InitializeDefaultComponent()
 	DamageCapsuleComponent->SetGenerateOverlapEvents(true);
 	DamageCapsuleComponent->SetCapsuleSize(100.f,50.f);
 	DamageCapsuleComponent->ComponentTags.Add(FName(cap_tag::EnemyDmgCap));
-	DamageCapsuleComponent->SetHiddenInGame(false);
+	//DamageCapsuleComponent->SetHiddenInGame(false);
 	DamageCapsuleComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	DamageCapsuleComponent->SetCollisionProfileName(FName(TEXT("DamageCapsule")));
 	

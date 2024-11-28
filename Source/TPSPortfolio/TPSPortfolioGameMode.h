@@ -13,6 +13,8 @@ class ATPSPortfolioGameMode : public AGameModeBase
 
 public:
 	ATPSPortfolioGameMode();
+
+
 };
 
 

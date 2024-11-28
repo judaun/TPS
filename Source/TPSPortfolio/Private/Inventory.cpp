@@ -8,7 +8,9 @@
 #include "TPSEnum.h"
 #include "Equipment.h"
 #include "AWeapon.h"
+#include "PlayerSkill.h"
 #include "TPSPortfolioCharacter.h"
+#include "Stratagem.h"
 
 // Sets default values for this component's properties
 UInventory::UInventory()
@@ -41,6 +43,14 @@ UInventory::~UInventory()
 	}
 	mEquipInventory.Reset();
 
+	for (auto map_elem : mSkillInventory)
+	{
+		for (auto vec_elem : map_elem.Value)
+		{
+			vec_elem.Reset();
+		}
+	}
+	mSkillInventory.Reset();
 }
 
 // Called when the game starts
@@ -77,6 +87,12 @@ void UInventory::InitializeInventory()
 	for (auto vec_elem : Equipdata)
 	{
 		AddEquip(vec_elem);
+	}
+
+	TArray<FSkillTable*> Skilldata = pGameInstance->GetSkill_ALL();
+	for (auto vec_elem : Skilldata)
+	{
+		AddSkill(vec_elem);
 	}
 }
 
@@ -210,5 +226,61 @@ AWeapon* UInventory::LoadWeapon(int32 weaponindex, bool issub)
 void UInventory::UnLoadWeapon(FEquipmentTable* equipdata)
 {
 
+}
+
+void UInventory::AddSkill(FSkillTable* skilldata)
+{
+	auto TA_Skill = mSkillInventory.Find(ESkillType::SKILL_ORBIT);
+	if (nullptr == TA_Skill)
+	{
+		TArray<TSharedPtr<UPlayerSkill>> newArr;
+		newArr.Emplace(MakeShared<UPlayerSkill>(skilldata));
+		mSkillInventory.Emplace(ESkillType::SKILL_ORBIT, newArr);
+
+	}
+	else
+	{
+		TA_Skill->Emplace(MakeShared<UPlayerSkill>(skilldata));
+	}
+}
+
+UPlayerSkill* UInventory::LoadSkill(int32 skillindex)
+{
+	auto TA_Skill = mSkillInventory.Find(ESkillType::SKILL_ORBIT);
+	if(nullptr == TA_Skill) return nullptr;
+
+	for (auto& elem_Arr : *TA_Skill)
+	{
+		if (elem_Arr->GetSkillKey() == skillindex)
+		{
+			return elem_Arr.Get();
+		}
+	}
+	return nullptr;
+}
+
+AStratagem* UInventory::LoadStratagem(int32 skillidx)
+{
+	auto TA_Skill = mSkillInventory.Find(ESkillType::SKILL_ORBIT);
+	if (nullptr == TA_Skill) return nullptr;
+
+	for (auto& elem_Arr : *TA_Skill)
+	{
+		if (elem_Arr->GetSkillKey() == skillidx)
+		{
+			FTransform SpawnTransform(FRotator::ZeroRotator, FVector::ZeroVector);
+			auto pStratagem = GetWorld()->SpawnActorDeferred<AStratagem>(AStratagem::StaticClass(), SpawnTransform);
+			if (pStratagem)
+			{
+				pStratagem->SetData(elem_Arr->GetSkillData());
+				pStratagem->DeferredInitialize();
+				pStratagem->FinishSpawning(SpawnTransform);
+			}
+
+			return pStratagem;
+		}
+	}
+
+	return nullptr;
 }
 

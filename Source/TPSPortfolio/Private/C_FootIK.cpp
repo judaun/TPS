@@ -87,7 +87,7 @@ FIKHitData UC_FootIK::FootIKTrace(float tracedistance, FName socketname)
 	TArray<AActor*> vecIgnore;
 	vecIgnore.Add(pOwner);
 
-	bool bDebug = true;
+	bool bDebug = false;
 	EDrawDebugTrace::Type eDebug = EDrawDebugTrace::None;
 	if (bDebug == true) 
 		eDebug = EDrawDebugTrace::ForOneFrame;

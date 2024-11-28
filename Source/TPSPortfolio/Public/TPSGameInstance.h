@@ -33,6 +33,12 @@ public:
 	TArray<FItemTable*> GetItemData_ALL();
 	FEquipmentTable* GetEquipmentData(int32 key);
 	TArray<FEquipmentTable*> GetEquipmentData_ALL();
+	FSkillTable* GetSkillData(int32 key);
+	TArray<FSkillTable*> GetSkill_ALL();
+
+	void MapChange(FString DestinationMapName);
+	UFUNCTION()
+	void MapChangeComplete();
 
 	/* 사운드 일반 재생 */
 	void StartSound(FString soundname, float volume = 1.f, bool isloop = false);
@@ -57,6 +63,8 @@ private:
 	UDataTable* DT_Item;
 	UPROPERTY()
 	UDataTable* DT_Equipment;
+	UPROPERTY()
+	UDataTable* DT_Skill;
 
 	UPROPERTY()
 	ATPSSoundManager* pSoundMng;
@@ -69,4 +77,6 @@ private:
 
 	UPROPERTY()
 	class ATPSCamaraMng* pCameraMng;
+
+	FString strMapName;
 };

@@ -68,3 +68,9 @@ enum class EEnemyType : uint8
 {
 	ENEMY_ASSAULT, ENEMY_TANK, ENEMY_SCOUT,
 };
+
+UENUM(BlueprintType)
+enum class ESkillType : uint8
+{
+	SKILL_ORBIT, SKILL_CHARACTER,
+};

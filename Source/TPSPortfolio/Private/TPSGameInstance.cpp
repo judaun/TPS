@@ -8,6 +8,7 @@
 #include "TPSCamaraMng.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TPSEnum.h"
+#include "Kismet/GameplayStatics.h"
 
 UTPSGameInstance::UTPSGameInstance()
 {
@@ -27,6 +28,7 @@ void UTPSGameInstance::Initialize_DataTable()
 {
 	LoadDataTable_Factory(TEXT("DataTable'/Game/Table/DT_Item.DT_Item'"), &DT_Item);
 	LoadDataTable_Factory(TEXT("DataTable'/Game/Table/DT_Equipment.DT_Equipment'"), &DT_Equipment);
+	LoadDataTable_Factory(TEXT("DataTable'/Game/Table/DT_Skill.DT_Skill'"), &DT_Skill);
 }
 
 void UTPSGameInstance::LoadDataTable_Factory(FString tablename, UDataTable** ptable)
@@ -66,6 +68,46 @@ TArray<FEquipmentTable*> UTPSGameInstance::GetEquipmentData_ALL()
 	TArray<FEquipmentTable*> TA_EquipData;
 	DT_Equipment->GetAllRows(TEXT(""), TA_EquipData);
 	return TA_EquipData;
+}
+
+FSkillTable* UTPSGameInstance::GetSkillData(int32 key)
+{
+	if(!IsValid(DT_Skill)) return nullptr;
+
+	return DT_Skill->FindRow<FSkillTable>(*FString::FromInt(key), TEXT(""));
+}
+
+TArray<FSkillTable*> UTPSGameInstance::GetSkill_ALL()
+{
+	TArray<FSkillTable*> TA_SkillData;
+	DT_Skill->GetAllRows(TEXT(""), TA_SkillData);
+	return TA_SkillData;
+}
+
+void UTPSGameInstance::MapChange(FString DestinationMapName)
+{
+	FString strOption = TEXT("?game=/Script/TPSPortfolio.LoadingMod");
+
+	UGameplayStatics::OpenLevel(GetWorld(), TEXT("LoadingMap"), true, *strOption);
+
+	FLatentActionInfo LatentInfo;
+	LatentInfo.CallbackTarget = this;
+	LatentInfo.ExecutionFunction = "MapChangeComplete";
+	LatentInfo.Linkage = 0;
+	LatentInfo.UUID = 100;
+	UGameplayStatics::LoadStreamLevel(this, *DestinationMapName, true, true, LatentInfo);
+
+	strMapName = DestinationMapName;
+}
+
+void UTPSGameInstance::MapChangeComplete()
+{
+	FString strOption = TEXT("?game=/Script/TPSPortfolio.TPSPortfolioGameMode");
+	// 로딩 화면 레벨 언로드
+	UGameplayStatics::UnloadStreamLevel(this, TEXT("LoadingMap"), FLatentActionInfo(), false);
+
+	// 목적지 레벨 활성화
+	UGameplayStatics::OpenLevel(this, *strMapName, true, *strOption);
 }
 
 void UTPSGameInstance::StartSound(FString soundname, float volume, bool isloop /*= false*/)

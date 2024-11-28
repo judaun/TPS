@@ -111,6 +111,43 @@ struct FEnemyTable : public FTableRowBase
 };
 
 
+USTRUCT()
+struct FSkillTable : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditAnywhere)
+		int32 Skillkey;
+
+	UPROPERTY(EditAnywhere)
+		FString Name;
+
+	UPROPERTY(EditAnywhere)
+		int32 Command;
+
+	UPROPERTY(EditAnywhere)
+		float Countdown;
+
+	UPROPERTY(EditAnywhere)
+		float Cooldown;
+
+	UPROPERTY(EditAnywhere)
+		float EffectRadius;
+
+	UPROPERTY(EditAnywhere)
+		float EffectTime;
+
+	UPROPERTY(EditAnywhere)
+		int32 Damage;
+
+	UPROPERTY(EditAnywhere)
+		float Radius;
+
+	UPROPERTY(EditAnywhere)
+		float Delay;
+
+};
+
 class TPSPORTFOLIO_API TPSDataTable
 {
 public:

@@ -16,7 +16,8 @@ class TPSPORTFOLIO_API AEnemySpawner : public AActor
 public:	
 	// Sets default values for this actor's properties
 	AEnemySpawner();
-
+private:
+	void NearCharacter();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -24,7 +25,16 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	void Spawn();
+	
 
+private:
+	float neartime;
+	float spawntime;
+	int32 spawncnt;
+	bool bisspawn;
+protected:
+public:
 	UPROPERTY(EditAnywhere)
-	TEnumAsByte<EEnemyType> eType;
+		TEnumAsByte<EEnemyType> eType;
 };

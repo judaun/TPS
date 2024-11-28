@@ -34,7 +34,7 @@ void UTPSAnimInstance::PlayAnimMontage()
 		return;
 	}
 	
-	if (pCharacter->GetIsGrenade())
+	if (pCharacter->GetIsGrenade() || pCharacter->CheckFlag(throw_attack))
 	{
 		PlayGrenade();
 		return;
@@ -341,7 +341,8 @@ void UTPSAnimInstance::BlendOutHit(class UAnimMontage*, bool interrupt)
 void UTPSAnimInstance::BlendOutThrow(class UAnimMontage*, bool interrupt)
 {
 	if (nullptr == pCharacter) return;
-	pCharacter->GrenadeEnd();
+	if(pCharacter->GetIsGrenade())
+		pCharacter->GrenadeEnd();
 }
 
 void UTPSAnimInstance::AnimNotify_WeaponSet()
@@ -432,5 +433,12 @@ void UTPSAnimInstance::AnimNotify_Healing()
 void UTPSAnimInstance::AnimNotify_GrenadeEnd()
 {
 	if (nullptr == pCharacter) return;
+	if (pCharacter->GetIsGrenade())
 	pCharacter->UseGrenadeEnd();
+
+	if (pCharacter->CheckFlag(throw_attack))
+	{
+		pCharacter->UseStratagemComplete();
+	}
+	
 }

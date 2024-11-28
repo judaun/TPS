@@ -17,7 +17,7 @@ public:
 //function//////////////////////////////////////////////
 private:
 	void InitializeMesh();
-	void DestroyProjectile();
+	void DestroyProjectile(FVector hitpos);
 protected:
 	virtual void BeginPlay() override;
 	void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
@@ -25,19 +25,20 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 
-	void SetData(bool isgravity, bool expolsive, int32 dmg, AActor* owner);
+	void SetData(bool isgravity, float expolderadius, int32 dmg, AActor* owner);
 	void SetDirection(FVector direction, float speed);
 //value/////////////////////////////////////////////////
 private:
 	FVector vDirection;
 	FVector vStart;
 	float fSpeed;
+	float fExplodeRadius;
 	int32 iDmg;
 
 	UPROPERTY()
 	TWeakObjectPtr<AActor> pOwner;
 protected:
 public:
-	UPROPERTY(Category = Character, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Category = Mesh, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMeshComponent> pMesh;
 };

@@ -18,6 +18,8 @@
 #include "Explosive.h"
 #include "Components/SplineMeshComponent.h"
 #include "Components/SplineComponent.h"
+#include "TPSGameInstanceSubsystem.h"
+#include "Components/DynamicMeshComponent.h"
 
 #define MAXIMUM_RECOIL_ANGLE 5
 
@@ -317,13 +319,30 @@ void AWeapon::AttackTrace()
 						pGameInstance->StartSoundLocation(sound_key::HitMark, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_MEDIUM, 1.f);
 					isEnemy = true;
 				}
-					
+				
 				FVector vHitDirection = (hitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 				UGameplayStatics::ApplyPointDamage(hitActor, FEquipData.iBaseDmg, vHitDirection, hitResult, pCharacter->GetController(),this,NULL);
 
-				
+				//MassEnemyKillProcessors
+				if (hitActor->ActorHasTag(FName(TEXT("MassActor"))))
+				{
+					pGameInstance->StartSoundLocation(sound_key::HitMark, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_MEDIUM, 1.f);
+					pGameInstance->SpawnEffect(Eff_key::MassBoom, GetWorld(), hitActor->GetActorLocation(), hitActor->GetActorRotation(), FVector(1.f), true);
+					isEnemy = true;
+					hitActor->Destroy();
+				}
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
+			
+				//Todo MeshBooelanTest
+				auto hitComponent = hitResult.GetComponent();
+				if (IsValid(hitComponent) && hitComponent->IsA(UDynamicMeshComponent::StaticClass()))
+				{
+					UE_LOG(LogTemp,Log,TEXT("hit DynamicMesh Comp"));
+					auto DynamicMeshCom = Cast<UDynamicMeshComponent>(hitComponent);
+					
+					pGameInstance->GetSubsystem<UTPSGameInstanceSubsystem>()->MeshBoolean(DynamicMeshCom, hitResult.Location, FVector(50.f));
+				}
 
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Hit Actor Name: %s"), *hitActor->GetName()));
 			}
 			SetSpawnDecal(hitResult.Location, hitResult.ImpactNormal.Rotation(), isEnemy);
 		}
@@ -343,7 +362,7 @@ void AWeapon::AttackTrace()
 		pNiagaraCom->Activate(true);
 	}
 
-	float fShakeScale = FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN ? 1.f : FEquipData.WeaponType == EWeaponType::WEAPON_RIFLE ? 0.15f:0.3f;
+	float fShakeScale = FEquipData.WeaponType == EWeaponType::WEAPON_SHOTGUN ? 1.f : FEquipData.WeaponType == EWeaponType::WEAPON_RIFLE ? 0.5f:0.5f;
 
 	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(CS_Attack, fShakeScale);
 	
@@ -464,7 +483,7 @@ void AWeapon::ArcAttack()
 	if (pExplosive)
 	{
 		pExplosive->DeferredInitialize(false);
-		pExplosive->SetExplosiveValue(true, 800.f, FEquipData.iBaseDmg);
+		pExplosive->SetExplosiveValue(true, FEquipData.fBaseAccuracy, FEquipData.iBaseDmg);
 		pExplosive->FinishSpawning(SpawnTransform);
 	}
 	pExplosive->AddActorWorldTransform(SpawnTransform);

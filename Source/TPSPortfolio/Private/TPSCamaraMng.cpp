@@ -15,6 +15,8 @@ ATPSCamaraMng::ATPSCamaraMng()
 void ATPSCamaraMng::InitializeCameraShake()
 {
 	AddCameraShakeBase(shake_key::Boom_Small, TEXT("Blueprint'/Game/ThirdPerson/Blueprints/BP_BoomShake'"));
+	AddCameraShakeBase(shake_key::Boom_Big, TEXT("Blueprint'/Game/ThirdPerson/Blueprints/BP_ExplosionShake'"));
+	//BP_ExplosionShake
 }
 
 void ATPSCamaraMng::AddCameraShakeBase(FString keyname, FString csaddress)

@@ -33,8 +33,9 @@ public:
 
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
+#if WITH_EDITOR
 	virtual void ValidateAssociatedAssets() override;
-
+#endif
 	UFUNCTION()
 		void OnMorphProgress(float morphvalue);
 

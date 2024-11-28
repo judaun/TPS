@@ -9,6 +9,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "TPSPortfolioCharacter.h"
+#include "Enemy.h"
+#include "Engine/DamageEvents.h"
+#include "Components/CapsuleComponent.h"
+#include "DestructActor.h"
 
 // Sets default values
 AExplosive::AExplosive()
@@ -39,10 +43,43 @@ void AExplosive::Explode()
 		pInstance->StartSoundLocation(sound_key::Boom1, GetWorld(), GetActorLocation(), ESoundAttenuationType::SOUND_LOUD);
 	}
 
-	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(this);
-	UGameplayStatics::ApplyRadialDamage(GetWorld(), iExpodeDmg, GetActorLocation(), fExplodeRadius, nullptr, ActorsToIgnore, this, GetWorld()->GetFirstPlayerController(), false, ECollisionChannel::ECC_WorldDynamic);
+	//TArray<AActor*> ActorsToIgnore;
+	//ActorsToIgnore.Add(this);
+	//UGameplayStatics::ApplyRadialDamage(GetWorld(), iExpodeDmg, GetActorLocation(), fExplodeRadius, nullptr, ActorsToIgnore, this, GetWorld()->GetFirstPlayerController(), false, ECollisionChannel::ECC_WorldDynamic);
 
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	TArray<AActor*> IgnoreActors;
+	TArray<AActor*> OutActors;
+	if (UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), fExplodeRadius, ObjectTypes, nullptr, IgnoreActors, OutActors))
+	{
+		FRadialDamageEvent DmgEvent;
+		DmgEvent.DamageTypeClass = TSubclassOf<UDamageType>(UDamageType::StaticClass());
+		DmgEvent.Origin = GetActorLocation();
+		DmgEvent.Params = FRadialDamageParams(iExpodeDmg,fExplodeRadius);
+		
+		for (auto elem_vec : OutActors)
+		{
+			TArray<FHitResult> HitList;
+			FVector elemLoc = elem_vec->GetActorLocation();
+			FVector FakeHitNorm = (DmgEvent.Origin - elemLoc).GetSafeNormal();
+			
+			if(elem_vec->IsA(AEnemy::StaticClass())|| elem_vec->IsA(ATPSPortfolioCharacter::StaticClass()) || elem_vec->IsA(ADestructActor::StaticClass()))
+			{
+				auto component = elem_vec->GetComponentByClass<UCapsuleComponent>();
+			
+				FHitResult Hit(elem_vec,component, elemLoc, FakeHitNorm);
+				HitList.Add(Hit);
+				DmgEvent.ComponentHits = HitList;
+				elem_vec->TakeDamage(iExpodeDmg,DmgEvent, GetWorld()->GetFirstPlayerController(),this);
+			}
+			else if (elem_vec->ActorHasTag(FName(TEXT("MassActor"))))
+			{
+				elem_vec->Destroy();
+			}
+		}
+		
+	}
+	
 	Destroy();
 }
 

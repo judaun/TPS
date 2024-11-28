@@ -23,6 +23,11 @@ namespace sound_key
 	TCHAR* const ImpactGround = TEXT("ImpactGround");
 	TCHAR* const HealEffect = TEXT("HealEffect");
 	TCHAR* const Bandage = TEXT("Bandage");
+	TCHAR* const SteelHit = TEXT("SteelHit");
+	TCHAR* const Gatling = TEXT("Gatling");
+	TCHAR* const Click = TEXT("Click");
+	TCHAR* const Charge = TEXT("Charge");
+	TCHAR* const Deploy = TEXT("Deploy");
 }
 
 UCLASS()

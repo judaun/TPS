@@ -16,7 +16,6 @@ ABullet::ABullet()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> FObj_Stmesh(TEXT("/Game/Props/Meshes/ETC/BulletFX.BulletFX"));
 	if (FObj_Stmesh.Succeeded())
 	{
-		pMesh->SetupAttachment(RootComponent);
 		pMesh->SetStaticMesh(FObj_Stmesh.Object);
 		pMesh->SetSimulatePhysics(true);
 		pMesh->SetCollisionProfileName(TEXT("MeshEffect"));
