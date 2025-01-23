@@ -41,6 +41,7 @@
 #include "WorldItem.h"
 #include "TPSGameSingleton.h"
 #include "Stratagem.h"
+#include "MissionObj.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATPSPortfolioCharacter
@@ -578,9 +579,48 @@ void ATPSPortfolioCharacter::NotifyActorBeginOverlap(AActor* OtherActor)
 
 			pEnemy->DmgCapsuleActive(false);
 		}
+
+		if (OtherActor->ActorHasTag(FName(TEXT("InteractionActor"))))
+		{
+			if (pInteractionActor == nullptr)
+			{
+				pInteractionActor = TWeakObjectPtr<AActor>(OtherActor);
+				if (pInteractionActor->IsA(AMissionObj::StaticClass()))
+					Cast<AMissionObj>(pInteractionActor)->InteractionUI(true);
+			}
+			else if(pInteractionActor != OtherActor)
+			{
+				double fSrcDist = FVector::Dist(pInteractionActor->GetActorLocation(), GetActorLocation());
+				double fDstDist = FVector::Dist(OtherActor->GetActorLocation(), GetActorLocation());;
+
+				if(fDstDist < fSrcDist)
+				{
+					if (pInteractionActor->IsA(AMissionObj::StaticClass()))
+						Cast<AMissionObj>(pInteractionActor)->InteractionUI(false);
+					if (OtherActor->IsA(AMissionObj::StaticClass()))
+						Cast<AMissionObj>(OtherActor)->InteractionUI(true);
+					pInteractionActor = OtherActor;
+				}
+			}
+			
+		}
 	}
 }
 
+
+void ATPSPortfolioCharacter::NotifyActorEndOverlap(AActor* OtherActor)
+{
+	Super::NotifyActorEndOverlap(OtherActor);
+	if (IsValid(OtherActor))
+	{
+		if (OtherActor == pInteractionActor)
+		{
+			if (pInteractionActor->IsA(AMissionObj::StaticClass()))
+				Cast<AMissionObj>(pInteractionActor)->InteractionUI(false);
+			pInteractionActor = nullptr;
+		}
+	}
+}
 
 FVector ATPSPortfolioCharacter::GetControlVector(bool IsFoward)
 {
@@ -1063,6 +1103,11 @@ void ATPSPortfolioCharacter::Interaction()
 	AWorldItem* pItem = NearItemCheck();
 	if(IsValid(pItem))
 		pItem->ObtainItem(this);
+
+	if (nullptr != pInteractionActor)
+	{
+		Cast<AMissionObj>(pInteractionActor)->Interaction();
+	}
 }
 
 void ATPSPortfolioCharacter::UseGrenadeEnd()

@@ -11,7 +11,10 @@ namespace EnemyKey
 {
 	int32 const ENEMY_EXPLODER = 1;
 	int32 const ENEMY_SCOUTER = 2;
+	int32 const ENEMY_MASS = 3;
 }
+
+class AMassSpawner;
 
 UCLASS()
 class TPSPORTFOLIO_API ATPSEnemyMng : public AActor
@@ -30,12 +33,14 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 
-	void SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator);
+	void SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator, bool ischase);
 	FEnemyTable* GetEnemyData(int32 key);
 //value///////////////////////////////////////////////
 private:
 	UPROPERTY()
 	class UDataTable* DT_Enemy;
+	UPROPERTY()
+	TSubclassOf<AMassSpawner> clsMassSpawner;
 protected:
 public:
 

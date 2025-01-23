@@ -126,6 +126,19 @@ void AEnemyController::SetPatrolPos(FVector patrolpos)
 	BTcomp->SetValueAsVector(bb_key::PatrolLocation, patrolpos);
 }
 
+void AEnemyController::SetForceTarget(AActor* actor)
+{
+	APawn* pCurPawn = GetPawn();
+	if (!IsValid(pCurPawn)) return;
+	AEnemy* pEnemy = Cast<AEnemy>(pCurPawn);
+	if (!IsValid(pEnemy)) return;
+	UBlackboardComponent* BTcomp = Blackboard.Get();
+
+	BTcomp->SetValueAsObject(bb_key::TargetActor, actor);
+
+	pEnemy->SetTargetActor(actor);
+}
+
 void AEnemyController::OnTargetDetected(AActor* actor, FAIStimulus const stimulus)
 {
 	APawn* pCurPawn = GetPawn();

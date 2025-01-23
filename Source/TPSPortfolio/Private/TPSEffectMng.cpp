@@ -66,7 +66,8 @@ void ATPSEffectMng::InitEffectManager()
 	AddEffect(Eff_key::Stratagem, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_Stratagem.FX_Stratagem'"));
 	AddEffect(Eff_key::BoomBig, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_BigExplosion.FX_BigExplosion'"));
 	AddEffect(Eff_key::VolumeFog, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_Fog.FX_Fog'"));
-
+	AddEffect(Eff_key::SpawnFog, TEXT("/Script/Niagara.NiagaraSystem'/Game/Effects/FX_Spawner.FX_Spawner'"));
+	///Script/Niagara.NiagaraSystem'/Game/Effects/FX_Spawner.FX_Spawner'
 
 	//Decal
 	AddDecal(TEXT("BulletHole"), TEXT("/Script/Engine.Material'/Game/Effects/M_BulletHole.M_BulletHole'"));

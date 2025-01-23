@@ -41,6 +41,7 @@ public:
 
 	/* Enemy의 공격 및 회전추적을 위한 타겟 엑터 지정 */
 	void SetTargetActor(AActor* actor);
+	void SetForceTargetActor(AActor* actor);
 	/* 타겟 위치 반환 */
 	FVector GetTargetActorPos();
 	/* 추적 종료시 타겟 엑터 초기화 */

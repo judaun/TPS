@@ -7,6 +7,7 @@
 #include "EnemySpawner.generated.h"
 
 enum class EEnemyType : uint8;
+class UNiagaraComponent;
 
 UCLASS()
 class TPSPORTFOLIO_API AEnemySpawner : public AActor
@@ -37,4 +38,8 @@ protected:
 public:
 	UPROPERTY(EditAnywhere)
 		TEnumAsByte<EEnemyType> eType;
+	UPROPERTY(EditAnywhere, Category="Effect")
+		UNiagaraComponent* pEffectComp;
+	UPROPERTY(EditAnywhere)
+		USceneComponent* DefaultRoot = nullptr;
 };

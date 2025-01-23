@@ -6,6 +6,7 @@
 #include "Enemy.h"
 #include "Exploder.h"
 #include "Scouter.h"
+#include "MassSpawner.h"
 
 // Sets default values
 ATPSEnemyMng::ATPSEnemyMng()
@@ -13,6 +14,11 @@ ATPSEnemyMng::ATPSEnemyMng()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	Initialize_DataTable();
+	ConstructorHelpers::FClassFinder<AMassSpawner> FCL_MassSpawner(TEXT("Blueprint'/Game/ThirdPerson/Blueprints/BP_MassSpawner'"));
+	if (FCL_MassSpawner.Succeeded())
+	{
+		clsMassSpawner = FCL_MassSpawner.Class;
+	}
 }
 
 void ATPSEnemyMng::Initialize_DataTable()
@@ -39,7 +45,7 @@ void ATPSEnemyMng::Tick(float DeltaTime)
 
 }
 
-void ATPSEnemyMng::SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator)
+void ATPSEnemyMng::SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator, bool ischase)
 {
 	FTransform SpawnTransform(rotator, location);
 	AEnemy* pEmeny = nullptr;
@@ -51,7 +57,9 @@ void ATPSEnemyMng::SpawnEnemy(int32 key, UWorld* const world, FVector location, 
 		break;
 		case EnemyKey::ENEMY_SCOUTER : pEmeny = world->SpawnActorDeferred<AScouter>(AScouter::StaticClass(), SpawnTransform);
 		break;
-		
+		case EnemyKey::ENEMY_MASS:
+		world->SpawnActor<AMassSpawner>(clsMassSpawner, location, rotator);
+		return;
 		default:
 		break;
 	 }
@@ -62,6 +70,9 @@ void ATPSEnemyMng::SpawnEnemy(int32 key, UWorld* const world, FVector location, 
 		pEmeny->SetEnemyData(pEnemyData);
 		pEmeny->FinishSpawning(SpawnTransform);
 	 }
+	if (ischase)
+		pEmeny->SetForceTargetActor(world->GetFirstPlayerController()->GetCharacter());
+
 
 }
 

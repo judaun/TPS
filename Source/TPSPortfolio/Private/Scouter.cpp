@@ -142,7 +142,7 @@ void AScouter::ActiveEffect(FVector direction)
 	actorparam.Owner = this;
 	auto pActor = GetWorld()->SpawnActor<AProjectile>(pProjectileClass,GetMesh()->GetSocketLocation(FName(TEXT("Muzzle"))),direction.Rotation(), actorparam);
 	pActor->SetDirection(direction,30.f);
-	pActor->SetData(true,0.f, GetEnemyData().ProjectileDamage, this);
+	pActor->SetData(true,100.f, GetEnemyData().ProjectileDamage, this);
 
 	FVector vSrc = GetActorLocation();
 	FVector vDst = GetWorld()->GetFirstPlayerController()->GetFocalLocation();

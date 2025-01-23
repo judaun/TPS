@@ -42,6 +42,8 @@ public:
 	void ChangeLongRange(bool longrange);
 	void SetPatrolPos(FVector patrolpos);
 
+	void SetForceTarget(AActor* actor);
+
 	UFUNCTION()
 		void OnTargetDetected(AActor* actor, FAIStimulus const stimulus);
 	UFUNCTION()

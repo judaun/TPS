@@ -9,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TPSPortfolioCharacter.h"
+#include "Components/DynamicMeshComponent.h"
 
 UAttackEnemyState::UAttackEnemyState()
 {
@@ -66,7 +67,7 @@ void UAttackEnemyState::MeleeAttack()
 	vDirection.Z += 0.5f;
 	pEnemy->GetCharacterMovement()->AddImpulse(vDirection* 800.f, true);
 
-	DrawDebugBox(GetWorld(), vTargetForeseeLoctaion, FVector(5.f), FColor::Red,false,3.f);
+	//DrawDebugBox(GetWorld(), vTargetForeseeLoctaion, FVector(5.f), FColor::Red,false,3.f);
 
 	pEnemy->DmgCapsuleActive(true, 2.f);
 
@@ -128,6 +129,12 @@ void UAttackEnemyState::LongRangeTrace()
 		{
 			auto hitActor = hitResult.GetActor();
 			if (hitActor->IsA(ATPSPortfolioCharacter::StaticClass()))
+			{
+				bIsTraced = true;
+				return;
+			}
+			auto hitComponent = hitResult.GetComponent();
+			if (IsValid(hitComponent) && hitComponent->IsA(UDynamicMeshComponent::StaticClass()))
 			{
 				bIsTraced = true;
 				return;

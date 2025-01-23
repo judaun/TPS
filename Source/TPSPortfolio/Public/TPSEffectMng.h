@@ -20,6 +20,7 @@ namespace Eff_key
 	TCHAR* const Stratagem = TEXT("Stratagem");
 	TCHAR* const BoomBig = TEXT("BoomBig");
 	TCHAR* const VolumeFog = TEXT("VolumeFog");
+	TCHAR* const SpawnFog = TEXT("SpawnFog");
 }
 
 UCLASS()

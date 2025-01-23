@@ -152,10 +152,10 @@ void UTPSGameInstance::SpawnDecal(FString keyname, TObjectPtr<UWorld> WorldConte
 	pEffectMng->SpawnDecal(keyname, WorldContextObject, lifetime, Location, Rotation, Scale, fadedistancesize);
 }
 
-void UTPSGameInstance::SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator)
+void UTPSGameInstance::SpawnEnemy(int32 key, UWorld* const world, FVector location, FRotator rotator, bool ischase)
 {
 	if(nullptr == pEnemyMng) return;
-	pEnemyMng->SpawnEnemy(key,world,location,rotator);
+	pEnemyMng->SpawnEnemy(key,world,location,rotator, ischase);
 }
 
 UNiagaraSystem* UTPSGameInstance::GetEffect(FString keyname)

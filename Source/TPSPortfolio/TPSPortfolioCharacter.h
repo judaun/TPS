@@ -298,6 +298,7 @@ public:
 	float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
 	void NotifyActorBeginOverlap(AActor* OtherActor) override;
+	void NotifyActorEndOverlap(AActor* OtherActor) override;
 
 	FVector GetChangeVector() { return vChangeDirection; }
 	FVector GetLerpVector() { return vLerpDirection; }
@@ -364,6 +365,8 @@ private:
 	FTimerHandle Ragdolltimehandle;
 	
 	TWeakObjectPtr<UCharacterHUD> pHud;
+
+	TWeakObjectPtr<AActor> pInteractionActor;
 
 	UPROPERTY()
 	TArray<AWeapon*> WeaponSlot;

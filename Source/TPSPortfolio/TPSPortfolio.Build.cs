@@ -20,6 +20,8 @@ public class TPSPortfolio : ModuleRules
         PrivateIncludePaths.Add("TPSPortfolio/Skill");
         PrivateIncludePaths.Add("TPSPortfolio/UI");
         PrivateIncludePaths.Add("TPSPortfolio/Subsystem");
+        PrivateIncludePaths.Add("TPSPortfolio/Mission");
+        PrivateIncludePaths.Add("TPSPortfolio/Enemy");
 
         PrivateDependencyModuleNames.AddRange(new string[] {
 			// AI/MassAI Plugin Modules

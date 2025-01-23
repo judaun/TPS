@@ -175,6 +175,14 @@ void AEnemy::SetTargetActor(AActor* actor)
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 
+void AEnemy::SetForceTargetActor(AActor* actor)
+{
+	AEnemyController* pController = Cast<AEnemyController>(GetController());
+
+	if (pController)
+		pController->SetForceTarget(actor);
+}
+
 FVector AEnemy::GetTargetActorPos()
 {
 	if (nullptr == wpTargetActor || !wpTargetActor.Get()) return FVector::ZeroVector;

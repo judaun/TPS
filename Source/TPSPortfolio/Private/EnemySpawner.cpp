@@ -5,6 +5,9 @@
 #include "TPSGameInstance.h"
 #include "TPSEnemyMng.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "TPSEffectMng.h"
 #include "TPSPortfolioCharacter.h"
 
 // Sets default values
@@ -13,9 +16,24 @@ AEnemySpawner::AEnemySpawner()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	neartime = 0.f;
-	spawncnt = 2;
-	spawntime = 0.f;
+	spawncnt = 5;
+	spawntime = 2.f;
 	bisspawn = false;
+
+	DefaultRoot = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultRoot"));
+	SetRootComponent(DefaultRoot);
+
+	//pEffectComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("SpawnerEffect"));
+	
+	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (pGameInstance)
+	{
+		pEffectComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), pGameInstance->GetEffect(Eff_key::SpawnFog), GetActorLocation(),  FRotator(0.f), FVector(10.f),false,false);
+		if (pEffectComp)
+		{
+			pEffectComp->Deactivate();
+		}
+	}
 }
 
 void AEnemySpawner::NearCharacter()
@@ -46,8 +64,11 @@ void AEnemySpawner::NearCharacter()
 void AEnemySpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	
+	/*DrawDebugBox(GetWorld(), GetActorLocation(), FVector(1000.f), FColor::Cyan, false, 30.f);*/
+	if (pEffectComp) {
+		pEffectComp->SetRelativeLocation(GetActorLocation());
+		pEffectComp->Activate();
+	}
 }
 
 // Called every frame
@@ -55,45 +76,42 @@ void AEnemySpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	neartime += DeltaTime;
-	if (neartime > 1.f)
+	spawntime -= DeltaTime;
+	if (spawntime <= 0.f)
 	{
-		NearCharacter();
+		Spawn();
 	}
-
-	if (bisspawn)
-	{
-		spawntime -= DeltaTime;
-		if (spawntime <= 0.f)
-		{
-			Spawn();
-		}
-	}
+	
 }
 
 void AEnemySpawner::Spawn()
 {
 	if(spawncnt <= 0) {
-	Destroy();
-	return;
-
+		if (pEffectComp)
+		{
+			pEffectComp->Deactivate();
+		}
+		Destroy();
+		return;
 	}
 
 	UTPSGameInstance* pGameInstance = Cast<UTPSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (pGameInstance)
 	{
-		int32 iSpawnKey = 1;
-		switch (eType)
+		//random 1 ~ 2
+		int32 iSpawnKey = rand() % 3 +1;
+
+		/*switch (eType)
 		{
 		case EEnemyType::ENEMY_ASSAULT: iSpawnKey = EnemyKey::ENEMY_EXPLODER;
 			break;
 		case EEnemyType::ENEMY_SCOUT: iSpawnKey = EnemyKey::ENEMY_SCOUTER;
 			break;
-		}
-		pGameInstance->SpawnEnemy(iSpawnKey, GetWorld(), GetActorLocation(), GetActorRotation());
+		}*/
+		pGameInstance->SpawnEnemy(iSpawnKey, GetWorld(), GetActorLocation(), GetActorRotation(), true);
 	}
 
 	--spawncnt;
-	spawntime = 10.f;
+	spawntime = 5.f;
 }
 
